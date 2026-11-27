@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { newGame, type Game } from "./game";
+import { INN_PRICE, newGame, type Game } from "./game";
+import { INVENTORY_SIZE, ITEMS } from "./items";
 
 /** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 아니면 index 번 선택지 */
 function stepOnce(g: Game, index = 0) {
@@ -97,5 +98,40 @@ describe("전투 진입", () => {
       return;
     }
     throw new Error("200개 시드 첫 화면에 전투가 하나도 없음");
+  });
+});
+
+describe("무적 판 없음", () => {
+  /** 숫돌을 사 모으고, 여관에서 쉬고, 약을 아껴 쓰는 플레이어. 강해지는 적이 없으면 일부 판이 끝나지 않던 전략 */
+  function hoarder(seed: number, limit = 3000) {
+    const g = newGame(seed);
+    while (!g.state.dead && g.state.step < limit) {
+      const s = g.state;
+      const p = s.player;
+      const low = p.hp < p.maxHp * 0.4;
+      if (s.battle) {
+        const pot = p.items.indexOf("potion");
+        if (low && pot >= 0) g.act("item", pot);
+        else if (low) g.act("flee");
+        else g.act("attack");
+      } else if (s.shop) {
+        const i = s.shop.stock.findIndex(
+          (id) => (id === "whetstone" || id === "potion") && p.gold >= ITEMS[id].price && p.items.length < INVENTORY_SIZE,
+        );
+        if (i >= 0) g.buy(i);
+        else g.leaveShop();
+      } else if (s.camp) {
+        g.rest(p.gold >= INN_PRICE && p.hp < p.maxHp / 2 ? "inn" : "campfire");
+      } else {
+        const w = p.items.indexOf("whetstone");
+        if (w >= 0) g.use(w);
+        else g.choose((seed * 31 + s.step * 7) % s.choices.length);
+      }
+    }
+    return g;
+  }
+
+  it("숫돌을 모으며 강해져도 결국 죽는다 (시드 300개)", () => {
+    for (let seed = 1; seed <= 300; seed++) expect(hoarder(seed).state.dead).toBe(true);
   });
 });

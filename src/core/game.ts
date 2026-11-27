@@ -106,7 +106,7 @@ export function newGame(seed: number): Game {
 
       switch (choice.kind) {
         case "battle":
-          state.battle = startBattle(rng);
+          state.battle = startBattle(rng, state.step);
           state.story = [BATTLE_TEXT.start(state.battle.enemy.name)];
           break;
         case "shop":

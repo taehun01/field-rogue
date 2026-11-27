@@ -23,7 +23,19 @@ export const ENEMY_WEIGHTS: Record<EnemyId, number> = { weak: 50, tough: 25, fie
 /** [임시값] 도망 성공 확률 */
 export const FLEE_CHANCE = 0.5;
 
-export function startBattle(rng: Rng): Battle {
+/**
+ * [임시값] 멀리 갈수록 세계가 위험해진다: SCALE_EVERY 걸음마다 적의 체력·공격이 SCALE_RATE 씩 오른다.
+ * 숫돌·여관으로 강해진 플레이어도 결국 죽게 하기 위해 (판은 죽을 때만 끝난다). 골드 보상은 그대로.
+ */
+export const SCALE_EVERY = 20;
+export const SCALE_RATE = 0.1;
+
+/** step 걸음째에 만나는 적에게 곱할 배율 (0~19걸음 1.0, 20~39걸음 1.1, ...) */
+export function enemyScale(step: number): number {
+  return 1 + SCALE_RATE * Math.floor(step / SCALE_EVERY);
+}
+
+export function startBattle(rng: Rng, step = 0): Battle {
   const ids = Object.keys(ENEMY_WEIGHTS) as EnemyId[];
   let roll = rng.next() * ids.reduce((s, k) => s + ENEMY_WEIGHTS[k], 0);
   let id = ids[ids.length - 1];
@@ -35,7 +47,10 @@ export function startBattle(rng: Rng): Battle {
     }
   }
   const base = ENEMIES[id];
-  return { enemy: { id, name: ENEMY_NAMES[id], hp: base.maxHp, ...base } };
+  const m = enemyScale(step);
+  const maxHp = Math.ceil(base.maxHp * m);
+  const atk = Math.ceil(base.atk * m);
+  return { enemy: { id, name: ENEMY_NAMES[id], ...base, hp: maxHp, maxHp, atk } };
 }
 
 /** 공격력 - 방어력 ±1, 최소 1 */

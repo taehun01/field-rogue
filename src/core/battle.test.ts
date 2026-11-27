@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { battleTurn, ENEMIES, FLEE_CHANCE, startBattle } from "./battle";
+import { battleTurn, ENEMIES, enemyScale, FLEE_CHANCE, SCALE_EVERY, startBattle } from "./battle";
 import { POTION_HEAL } from "./items";
 import { createRng } from "./rng";
 import type { Battle, Player } from "./types";
@@ -22,6 +22,24 @@ describe("적", () => {
       expect(b.enemy.hp).toBe(ENEMIES[b.enemy.id].maxHp);
     }
     expect(seen.size).toBe(3);
+  });
+});
+
+describe("멀리 갈수록 강해지는 적", () => {
+  it(`${SCALE_EVERY}걸음 전까지는 원래 수치, 그 뒤로 체력·공격이 오른다 (방어·골드는 그대로)`, () => {
+    expect(enemyScale(0)).toBe(1);
+    expect(enemyScale(SCALE_EVERY - 1)).toBe(1);
+    expect(enemyScale(SCALE_EVERY)).toBeGreaterThan(1);
+
+    // 같은 시드면 같은 적이 뽑히므로 걸음 수만 바꿔 비교한다
+    const early = startBattle(createRng(9), 0).enemy;
+    const late = startBattle(createRng(9), SCALE_EVERY * 10).enemy;
+    expect(late.id).toBe(early.id);
+    expect(late.maxHp).toBeGreaterThan(early.maxHp);
+    expect(late.hp).toBe(late.maxHp);
+    expect(late.atk).toBeGreaterThan(early.atk);
+    expect(late.def).toBe(early.def);
+    expect(late.gold).toEqual(early.gold);
   });
 });
 
