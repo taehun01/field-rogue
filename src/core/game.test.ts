@@ -7,13 +7,14 @@ import { INVENTORY_SIZE, ITEMS } from "./items";
 /** 이벤트의 마지막 고를 거리 (늘 "지나간다", 조건 없음) */
 const lastOption = (g: Game) => eventById(g.state.event!.id).options.length - 1;
 
-/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 아니면 index 번 선택지 */
+/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 던전이면 index 번 갈림길, 아니면 index 번 선택지 */
 function stepOnce(g: Game, index = 0) {
   const s = g.state;
   if (s.battle) g.act("attack");
   else if (s.shop) g.leaveShop();
   else if (s.camp) g.rest("campfire");
   else if (s.event) g.answer(lastOption(g));
+  else if (s.dungeon) g.enterRoom(index % s.dungeon.choices.length);
   else g.choose(index % s.choices.length);
 }
 
@@ -40,7 +41,7 @@ describe("한 판", () => {
     const first = g.state.choices[0].kind;
     g.choose(0);
     expect(g.state.since[first]).toBe(0);
-    while (g.state.battle || g.state.shop || g.state.camp || g.state.event) stepOnce(g);
+    while (g.state.battle || g.state.shop || g.state.camp || g.state.event || g.state.dungeon) stepOnce(g);
     const second = g.state.choices[0]?.kind;
     if (!second) return; // 첫 전투에서 죽음
     g.choose(0);
@@ -53,7 +54,7 @@ describe("한 판", () => {
       const g = newGame(seed);
       let last = null;
       while (!g.state.dead && g.state.step < 500) {
-        if (g.state.battle || g.state.shop || g.state.camp || g.state.event) {
+        if (g.state.battle || g.state.shop || g.state.camp || g.state.event || g.state.dungeon) {
           stepOnce(g);
           continue;
         }
@@ -133,8 +134,12 @@ describe("무적 판 없음", () => {
         const opts = eventById(s.event.id).options;
         const ok = opts.map((_, i) => i).filter((i) => canChoose(opts[i], p));
         g.answer(ok[(seed + s.step) % ok.length]);
+      } else if (s.dungeon) {
+        // 던전은 체력이 넉넉할 때만 끝까지, 아니면 나간다
+        if (low) g.leaveDungeon();
+        else g.enterRoom(s.step % s.dungeon.choices.length);
       } else {
-        const w = p.items.indexOf("whetstone");
+        const w = p.items.findIndex((id) => id === "whetstone" || id === "heart");
         if (w >= 0) g.use(w);
         else g.choose((seed * 31 + s.step * 7) % s.choices.length);
       }

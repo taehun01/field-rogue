@@ -18,6 +18,8 @@ export interface Handlers {
   onLeaveShop(): void;
   onRest(option: CampOption): void;
   onAnswer(index: number): void;
+  onEnterRoom(index: number): void;
+  onLeaveDungeon(): void;
   onRestart(): void;
 }
 
@@ -35,6 +37,7 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
       <span>방어 ${p.def}</span>
       <span class="gold">골드 ${p.gold}</span>
       <span class="dim">${s.step}걸음</span>
+      ${s.dungeon ? `<span class="dungeon">던전 안</span>` : ""}
     </header>
     <div class="art" aria-hidden="true"></div>
     ${s.battle ? enemyLine(s.battle.enemy) : ""}
@@ -101,14 +104,21 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
     return;
   }
 
+  // 던전 갈림길: 단서 2개 + 나가기 (남은 방 수는 숨긴다)
+  if (s.dungeon) {
+    s.dungeon.choices.forEach((c, i) => add(c.hint, () => h.onEnterRoom(i)));
+    add(`나간다 <span class="dim">(보상 없이)</span>`, h.onLeaveDungeon);
+    return;
+  }
+
   // 단서만 보여 준다. 무엇이 벌어질지는 고른 뒤에 안다.
   s.choices.forEach((c, i) => add(c.hint, () => h.onChoose(i)));
 }
 
-/** 소지품 칸. 선택지 화면에서는 회복약·숫돌을 여기서 바로 쓸 수 있다 (번호 키 없음) */
+/** 소지품 칸. 선택지 화면과 던전 갈림길에서는 회복약·숫돌·심장을 여기서 바로 쓸 수 있다 (번호 키 없음) */
 function renderInventory(el: HTMLElement, s: GameState, h: Handlers) {
   const items = s.player.items;
-  const field = !s.dead && !s.battle && !s.shop && !s.camp && !s.event;
+  const field = !s.dead && !s.battle && !s.shop && !s.camp && !s.event; // 던전 갈림길도 포함
   el.innerHTML = `<span class="dim">소지품 ${items.length}/${INVENTORY_SIZE}</span>`;
   items.forEach((id, i) => {
     const usable = field && ITEMS[id].field;

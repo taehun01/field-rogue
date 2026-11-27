@@ -30,3 +30,5 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .item { font: inherit; color: var(--text); background: transparent; border: 2px dashed #2e2a38; padding: 4px 10px; cursor: pointer; }
 .item:hover:not(:disabled) { border-color: var(--accent); }
 .item:disabled { color: var(--dim); cursor: default; }
+/* 던전 안 표시 (6단계) */
+.stats .dungeon { color: #8fb3d9; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EVENTS, eventById } from "../data/events";
+import { DUNGEON_EVENTS, EVENTS, FIELD_EVENTS, eventById } from "../data/events";
 import { canChoose, resolveOption } from "./events";
 import { newGame, START_PLAYER, type Game } from "./game";
 import { INVENTORY_SIZE } from "./items";
@@ -20,6 +20,7 @@ function gameAtEvent(seed: number, id?: string): Game | null {
     } else if (s.battle) g.act("attack");
     else if (s.shop) g.leaveShop();
     else if (s.camp) g.rest("campfire");
+    else if (s.dungeon) g.leaveDungeon();
     else {
       const i = s.choices.findIndex((c) => c.kind === "event" && (!id || c.eventId === id));
       g.choose(Math.max(0, i));
@@ -29,8 +30,9 @@ function gameAtEvent(seed: number, id?: string): Game | null {
 }
 
 describe("이벤트 데이터", () => {
-  it("이벤트 3개, 고를 거리 2~3개, 단서는 이벤트끼리 겹치지 않는다", () => {
-    expect(EVENTS.length).toBe(3);
+  it("필드 이벤트 3개 + 던전 이벤트 4개, 고를 거리 2~3개, 단서는 이벤트끼리 겹치지 않는다", () => {
+    expect(FIELD_EVENTS.length).toBe(3);
+    expect(DUNGEON_EVENTS.length).toBe(4);
     const hints = EVENTS.flatMap((e) => e.hints);
     expect(new Set(hints).size).toBe(hints.length);
     for (const e of EVENTS) {

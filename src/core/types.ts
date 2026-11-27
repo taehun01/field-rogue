@@ -3,7 +3,8 @@
 /** 선택지를 고르면 벌어지는 일의 종류 (docs/01-mvp.md 한 판의 흐름 3번) */
 export type SceneKind = "battle" | "event" | "rest" | "shop" | "dungeon";
 
-export type ItemId = "potion" | "bomb" | "smoke" | "whetstone" | "charm";
+/** heart 는 던전 보상에서만 나온다 (상점에 없음) */
+export type ItemId = "potion" | "bomb" | "smoke" | "whetstone" | "charm" | "heart";
 
 export interface Player {
   hp: number;
@@ -39,6 +40,27 @@ export interface Enemy {
   gold: [number, number];
 }
 
+/** 던전 방에서 벌어지는 일 (6단계) */
+export type RoomKind = "battle" | "event" | "empty";
+
+/** 던전 갈림길 하나. 필드 선택지처럼 단서만 보이고, 가끔 속인다 */
+export interface RoomChoice {
+  hintKind: RoomKind;
+  hint: string;
+  kind: RoomKind;
+  eventId?: string;
+}
+
+/** 던전 안에 있는 동안의 상태. 방 안에서 전투·이벤트 중이면 battle·event 도 함께 차 있다 */
+export interface Dungeon {
+  /** 이 던전의 방 수 (화면에는 숨긴다) */
+  rooms: number;
+  /** 지나온 방 수 */
+  cleared: number;
+  /** 지금 고를 갈림길. 방 안에서 일이 벌어지는 중이면 빈 배열 */
+  choices: RoomChoice[];
+}
+
 export type BattleAction = "attack" | "guard" | "item" | "flee";
 
 /** 진행 중인 전투. 전투 중에는 선택지 대신 전투 행동을 고른다 */
@@ -57,6 +79,8 @@ export interface GameState {
   shop: { stock: ItemId[] } | null;
   /** 이벤트 중이면 그 이벤트 id. 아니면 null */
   event: { id: string } | null;
+  /** 던전 안이면 그 상태. 아니면 null */
+  dungeon: Dungeon | null;
   /** 쉴 곳에 와서 모닥불/여관을 고르는 중 */
   camp: boolean;
   /** 지금 고를 수 있는 선택지 2~3개. 전투·상점·휴식·이벤트 중이거나 죽었으면 빈 배열 */

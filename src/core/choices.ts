@@ -7,7 +7,7 @@
 // 7단계(보스 징조·우연)는 여기에 규칙을 하나 더 얹는 식으로 들어온다.
 
 import { HINTS } from "../content/placeholder";
-import { EVENTS, eventByHint } from "../data/events";
+import { FIELD_EVENTS, eventByHint } from "../data/events";
 import type { Rng } from "./rng";
 import type { Choice, SceneKind } from "./types";
 
@@ -62,7 +62,7 @@ export function rollChoices(rng: Rng, ctx: ChoiceContext = EMPTY_CONTEXT): Choic
     const kind = rng.next() < DECEIVE_CHANCE ? otherKind(hintKind, weights, rng) : hintKind;
     const choice: Choice = { hintKind, hint, kind };
     // 이벤트 단서면 그 이벤트가, 다른 단서에 속아 이벤트가 벌어지면 아무 이벤트나 벌어진다
-    if (kind === "event") choice.eventId = hintKind === "event" ? eventByHint(hint)!.id : rng.pick(EVENTS).id;
+    if (kind === "event") choice.eventId = hintKind === "event" ? eventByHint(hint)!.id : rng.pick(FIELD_EVENTS).id;
     out.push(choice);
   }
   return out;

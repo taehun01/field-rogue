@@ -16,6 +16,7 @@ function reach(kind: SceneKind, seed = 1): Game {
       else if (st.shop) g.leaveShop();
       else if (st.camp) g.rest("campfire");
       else if (st.event) g.answer(eventById(st.event.id).options.length - 1);
+      else if (st.dungeon) g.leaveDungeon();
       else {
         const i = st.choices.findIndex((c) => c.kind === kind);
         g.choose(Math.max(0, i));
