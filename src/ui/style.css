@@ -25,3 +25,8 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .enemy { color: #e06c6c; margin: 0 0 8px; }
 .choice:disabled { opacity: 0.4; cursor: default; }
 .seed { margin-top: 24px; font-size: 14px; }
+/* 소지품 칸 (4단계) */
+.inventory { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 15px; }
+.item { font: inherit; color: var(--text); background: transparent; border: 2px dashed #2e2a38; padding: 4px 10px; cursor: pointer; }
+.item:hover:not(:disabled) { border-color: var(--accent); }
+.item:disabled { color: var(--dim); cursor: default; }

@@ -3,13 +3,16 @@
 /** 선택지를 고르면 벌어지는 일의 종류 (docs/01-mvp.md 한 판의 흐름 3번) */
 export type SceneKind = "battle" | "event" | "rest" | "shop" | "dungeon";
 
+export type ItemId = "potion" | "bomb" | "smoke" | "whetstone" | "charm";
+
 export interface Player {
   hp: number;
   maxHp: number;
   atk: number;
   def: number;
   gold: number;
-  items: string[];
+  /** 소지품. 칸 수는 items.ts INVENTORY_SIZE */
+  items: ItemId[];
 }
 
 /** 화면에 보이는 선택지 하나. 단서만 보이고, 무엇이 벌어질지는 고른 뒤에 안다. */
@@ -48,7 +51,11 @@ export interface GameState {
   player: Player;
   /** 진행 중인 전투. 없으면 null */
   battle: Battle | null;
-  /** 지금 고를 수 있는 선택지 2~3개. 전투 중이거나 죽었으면 빈 배열 */
+  /** 상점에 들어와 있으면 진열된 물건 (산 것은 빠진다). 아니면 null */
+  shop: { stock: ItemId[] } | null;
+  /** 쉴 곳에 와서 모닥불/여관을 고르는 중 */
+  camp: boolean;
+  /** 지금 고를 수 있는 선택지 2~3개. 전투·상점·휴식 중이거나 죽었으면 빈 배열 */
   choices: Choice[];
   /** 종류별로 마지막으로 벌어진 뒤 지난 걸음 수 (0 = 방금). 다음 선택지 규칙이 참고한다 */
   since: Partial<Record<SceneKind, number>>;

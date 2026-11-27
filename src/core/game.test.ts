@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { newGame, type Game } from "./game";
 
-/** 한 걸음: 전투 중이면 공격, 아니면 index 번 선택지 */
+/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 아니면 index 번 선택지 */
 function stepOnce(g: Game, index = 0) {
-  if (g.state.battle) g.act("attack");
-  else g.choose(index % g.state.choices.length);
+  const s = g.state;
+  if (s.battle) g.act("attack");
+  else if (s.shop) g.leaveShop();
+  else if (s.camp) g.rest("campfire");
+  else g.choose(index % s.choices.length);
 }
 
 /** 항상 첫 번째 선택지를 고르고, 싸우면 공격만 하며 죽을 때까지 돌린다 */
@@ -30,7 +33,7 @@ describe("한 판", () => {
     const first = g.state.choices[0].kind;
     g.choose(0);
     expect(g.state.since[first]).toBe(0);
-    while (g.state.battle) g.act("attack");
+    while (g.state.battle || g.state.shop || g.state.camp) stepOnce(g);
     const second = g.state.choices[0]?.kind;
     if (!second) return; // 첫 전투에서 죽음
     g.choose(0);
@@ -43,8 +46,8 @@ describe("한 판", () => {
       const g = newGame(seed);
       let last = null;
       while (!g.state.dead && g.state.step < 500) {
-        if (g.state.battle) {
-          g.act("attack");
+        if (g.state.battle || g.state.shop || g.state.camp) {
+          stepOnce(g);
           continue;
         }
         const kind = g.state.choices[seed % g.state.choices.length].kind;

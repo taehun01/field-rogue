@@ -3,6 +3,7 @@
 // 화면과 분리된 순수 로직: 시뮬레이션에서 그대로 돌린다.
 
 import { BATTLE_TEXT, ENEMY_NAMES } from "../content/placeholder";
+import { useItem } from "./items";
 import type { Rng } from "./rng";
 import type { Battle, BattleAction, Enemy, EnemyId, Player } from "./types";
 
@@ -21,10 +22,6 @@ export const ENEMY_WEIGHTS: Record<EnemyId, number> = { weak: 50, tough: 25, fie
 
 /** [임시값] 도망 성공 확률 */
 export const FLEE_CHANCE = 0.5;
-
-/** [임시값] 회복약 회복량 */
-export const POTION_HEAL = 10;
-export const POTION = "회복약";
 
 export function startBattle(rng: Rng): Battle {
   const ids = Object.keys(ENEMY_WEIGHTS) as EnemyId[];
@@ -48,12 +45,16 @@ export function damage(atk: number, def: number, rng: Rng): number {
 
 export type TurnOutcome = "ongoing" | "won" | "fled";
 
-/** 한 턴을 처리한다. battle 과 player 를 직접 바꾸고, 보여줄 문장과 결과를 돌려준다. */
+/**
+ * 한 턴을 처리한다. battle 과 player 를 직접 바꾸고, 보여줄 문장과 결과를 돌려준다.
+ * action 이 "item" 이면 itemIndex 번 소지품을 쓴다. 쓸 수 없으면 턴을 쓰지 않는다.
+ */
 export function battleTurn(
   b: Battle,
   p: Player,
   action: BattleAction,
   rng: Rng,
+  itemIndex = 0,
 ): { lines: string[]; outcome: TurnOutcome } {
   const e = b.enemy;
   const lines: string[] = [];
@@ -64,12 +65,6 @@ export function battleTurn(
       const dmg = damage(p.atk, e.def, rng);
       e.hp = Math.max(0, e.hp - dmg);
       lines.push(BATTLE_TEXT.attack(e.name, dmg));
-      if (e.hp === 0) {
-        const gold = rng.int(e.gold[0], e.gold[1]);
-        p.gold += gold;
-        lines.push(BATTLE_TEXT.won(e.name, gold));
-        return { lines, outcome: "won" };
-      }
       break;
     }
     case "guard":
@@ -77,12 +72,10 @@ export function battleTurn(
       lines.push(BATTLE_TEXT.guard);
       break;
     case "item": {
-      const i = p.items.indexOf(POTION);
-      if (i < 0) return { lines: [BATTLE_TEXT.noItem], outcome: "ongoing" }; // 턴을 쓰지 않음
-      p.items.splice(i, 1);
-      const heal = Math.min(POTION_HEAL, p.maxHp - p.hp);
-      p.hp += heal;
-      lines.push(BATTLE_TEXT.potion(heal));
+      const used = useItem(p, itemIndex, e);
+      if (!used) return { lines: [BATTLE_TEXT.noItem], outcome: "ongoing" };
+      lines.push(...used.lines);
+      if (used.fled) return { lines, outcome: "fled" };
       break;
     }
     case "flee":
@@ -92,6 +85,14 @@ export function battleTurn(
       }
       lines.push(BATTLE_TEXT.fleeFailed);
       break;
+  }
+
+  // 공격이나 폭탄으로 쓰러뜨렸으면 반격 없이 승리
+  if (e.hp <= 0) {
+    const gold = rng.int(e.gold[0], e.gold[1]);
+    p.gold += gold;
+    lines.push(BATTLE_TEXT.won(e.name, gold));
+    return { lines, outcome: "won" };
   }
 
   // 적의 차례

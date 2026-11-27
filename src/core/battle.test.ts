@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { battleTurn, ENEMIES, FLEE_CHANCE, POTION, POTION_HEAL, startBattle } from "./battle";
+import { battleTurn, ENEMIES, FLEE_CHANCE, startBattle } from "./battle";
+import { POTION_HEAL } from "./items";
 import { createRng } from "./rng";
 import type { Battle, Player } from "./types";
 
 const player = (over: Partial<Player> = {}): Player => ({
-  hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: [POTION], ...over,
+  hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: ["potion"], ...over,
 });
 
 const battle = (over: Partial<Battle["enemy"]> = {}): Battle => ({
