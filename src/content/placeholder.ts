@@ -1,12 +1,14 @@
 // [임시 문장] 1단계에서 루프가 돌아가는지 보기 위한 자리표시 글이다.
 // 최종 문장도 Claude가 쓰고 Taehun이 플레이하며 판단한다 (CLAUDE.md 역할 분담). 이 파일만 고치면 화면 글이 바뀐다.
 
+import { EVENTS } from "../data/events";
 import type { EnemyId, ItemId, SceneKind } from "../core/types";
 
 /** 선택지에 보이는 짧은 단서. 종류마다 여러 개 중 하나가 무작위로 나온다. */
 export const HINTS: Record<SceneKind, readonly string[]> = {
   battle: ["풀숲이 이상하게 조용하다", "멀리서 쇳소리가 들린다", "짐승 냄새가 짙다"],
-  event: ["길가에 누군가 서 있다", "부서진 수레가 보인다", "낯선 노랫소리가 난다"],
+  // 이벤트 단서는 이벤트마다 data/events.ts 에 있다. 이 단서를 고르면 그 이벤트가 벌어진다
+  event: EVENTS.flatMap((e) => e.hints),
   rest: ["바람이 잦아드는 언덕", "꺼지지 않은 모닥불 자국", "맑은 샘물 소리"],
   shop: ["연기 나는 굴뚝", "짐을 잔뜩 실은 노새", "흥정하는 목소리"],
   dungeon: ["땅이 아래로 꺼져 있다", "돌문 틈으로 찬 바람", "이끼 낀 계단"],

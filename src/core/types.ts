@@ -22,6 +22,8 @@ export interface Choice {
   hint: string;
   /** 실제로 벌어질 종류. 대개 hintKind 와 같고, 가끔 속임이면 다르다 */
   kind: SceneKind;
+  /** kind 가 "event" 면 벌어질 이벤트 id (data/events.ts) */
+  eventId?: string;
 }
 
 export type EnemyId = "weak" | "tough" | "fierce";
@@ -53,9 +55,11 @@ export interface GameState {
   battle: Battle | null;
   /** 상점에 들어와 있으면 진열된 물건 (산 것은 빠진다). 아니면 null */
   shop: { stock: ItemId[] } | null;
+  /** 이벤트 중이면 그 이벤트 id. 아니면 null */
+  event: { id: string } | null;
   /** 쉴 곳에 와서 모닥불/여관을 고르는 중 */
   camp: boolean;
-  /** 지금 고를 수 있는 선택지 2~3개. 전투·상점·휴식 중이거나 죽었으면 빈 배열 */
+  /** 지금 고를 수 있는 선택지 2~3개. 전투·상점·휴식·이벤트 중이거나 죽었으면 빈 배열 */
   choices: Choice[];
   /** 종류별로 마지막으로 벌어진 뒤 지난 걸음 수 (0 = 방금). 다음 선택지 규칙이 참고한다 */
   since: Partial<Record<SceneKind, number>>;

@@ -1,6 +1,6 @@
 // 장면-선택지 루프 (1단계). 다음 선택지를 뽑는 규칙은 choices.ts (2단계).
 // 선택지 2~3개 → 고르면 장면 하나가 벌어짐 → 다음 선택지. 되돌아가기 없음. 체력 0이면 끝.
-// 전투(3단계), 상점·휴식(4단계)은 선택지 대신 자기 화면을 띄우고, 끝나면 다음 선택지로 돌아온다.
+// 전투(3단계), 상점·휴식(4단계), 이벤트(5단계)는 선택지 대신 자기 화면을 띄우고, 끝나면 다음 선택지로 돌아온다.
 // 화면과 분리된 순수 로직이라 테스트와 밸런스 시뮬레이션에서 그대로 돌릴 수 있다.
 
 import {
@@ -15,6 +15,8 @@ import {
 } from "../content/placeholder";
 import { battleTurn, startBattle } from "./battle";
 import { rollChoices } from "./choices";
+import { eventById } from "../data/events";
+import { resolveOption } from "./events";
 import { CHARM_REVIVE, INVENTORY_SIZE, ITEM_IDS, ITEMS, useItem } from "./items";
 import { createRng, type Rng } from "./rng";
 import type { BattleAction, GameState, ItemId, Player, SceneKind } from "./types";
@@ -45,6 +47,8 @@ export interface Game {
   leaveShop(): void;
   /** 쉴 곳에서 모닥불 또는 여관을 고른다. */
   rest(option: CampOption): void;
+  /** 이벤트에서 index 번 고를 거리를 고른다. 조건이 안 되면 아무 일도 없다. */
+  answer(index: number): void;
 }
 
 export function newGame(seed: number): Game {
@@ -56,6 +60,7 @@ export function newGame(seed: number): Game {
     battle: null,
     shop: null,
     camp: false,
+    event: null,
     choices: [],
     since: {},
     lastHints: [],
@@ -65,8 +70,8 @@ export function newGame(seed: number): Game {
   state.choices = rollChoices(rng);
   const p = state.player;
 
-  /** 선택지 화면이 아닌 다른 화면(전투·상점·휴식) 중인가 */
-  const busy = () => state.battle !== null || state.shop !== null || state.camp;
+  /** 선택지 화면이 아닌 다른 화면(전투·상점·휴식·이벤트) 중인가 */
+  const busy = () => state.battle !== null || state.shop !== null || state.camp || state.event !== null;
 
   /** 체력이 0 이하면 부활 부적을 쓰거나, 없으면 죽음 처리하고 true */
   function checkDeath(): boolean {
@@ -83,6 +88,7 @@ export function newGame(seed: number): Game {
     state.battle = null;
     state.shop = null;
     state.camp = false;
+    state.event = null;
     state.story.push(DEATH);
     state.choices = [];
     return true;
@@ -117,9 +123,15 @@ export function newGame(seed: number): Game {
           state.camp = true;
           state.story = [CAMP_TEXT.enter];
           break;
-        default:
-          state.story = resolve(choice.kind, p, rng);
-          if (!checkDeath()) nextChoices();
+        case "event": {
+          const ev = eventById(choice.eventId!);
+          state.event = { id: ev.id };
+          state.story = [...ev.intro];
+          break;
+        }
+        case "dungeon":
+          state.story = ["[임시] 던전 입구를 발견했다. 아직 들어갈 수 없다."];
+          nextChoices();
       }
       if (choice.kind !== choice.hintKind) state.story.unshift(DECEIVED);
     },
@@ -166,6 +178,21 @@ export function newGame(seed: number): Game {
       nextChoices();
     },
 
+    answer(index) {
+      if (state.dead || !state.event) return;
+      const result = resolveOption(eventById(state.event.id), index, p, rng);
+      if (!result) return;
+      state.event = null;
+      state.story = result.lines;
+      if (checkDeath()) return;
+      if (result.battle) {
+        state.battle = startBattle(rng, state.step);
+        state.story.push(BATTLE_TEXT.start(state.battle.enemy.name));
+      } else {
+        nextChoices();
+      }
+    },
+
     rest(option) {
       if (state.dead || !state.camp) return;
       if (option === "inn") {
@@ -196,25 +223,4 @@ function rollStock(rng: Rng): ItemId[] {
     out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
   }
   return out;
-}
-
-/**
- * 선택지 화면에서 바로 끝나는 장면을 처리하고 보여줄 문장을 돌려준다. player 를 직접 바꾼다.
- * 전투는 battle.ts, 상점·휴식은 위의 자기 화면. 이벤트(5단계)·던전(6단계)은 아직 자리표시.
- */
-function resolve(kind: "event" | "dungeon", p: Player, rng: Rng): string[] {
-  switch (kind) {
-    case "event": {
-      if (rng.next() < 0.5) {
-        const gold = rng.int(2, 6);
-        p.gold += gold;
-        return [`[임시] 길에서 동전 주머니를 주웠다. 골드 +${gold}`];
-      }
-      const dmg = rng.int(1, 3);
-      p.hp -= dmg;
-      return [`[임시] 덫을 밟았다. 체력 -${dmg}`];
-    }
-    case "dungeon":
-      return ["[임시] 던전 입구를 발견했다. 아직 들어갈 수 없다."];
-  }
 }

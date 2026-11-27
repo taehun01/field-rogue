@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { INN_PRICE, newGame, type Game } from "./game";
+import { eventById } from "../data/events";
+import { canChoose } from "./events";
 import { INVENTORY_SIZE, ITEMS } from "./items";
+
+/** 이벤트의 마지막 고를 거리 (늘 "지나간다", 조건 없음) */
+const lastOption = (g: Game) => eventById(g.state.event!.id).options.length - 1;
 
 /** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 아니면 index 번 선택지 */
 function stepOnce(g: Game, index = 0) {
@@ -8,6 +13,7 @@ function stepOnce(g: Game, index = 0) {
   if (s.battle) g.act("attack");
   else if (s.shop) g.leaveShop();
   else if (s.camp) g.rest("campfire");
+  else if (s.event) g.answer(lastOption(g));
   else g.choose(index % s.choices.length);
 }
 
@@ -34,7 +40,7 @@ describe("한 판", () => {
     const first = g.state.choices[0].kind;
     g.choose(0);
     expect(g.state.since[first]).toBe(0);
-    while (g.state.battle || g.state.shop || g.state.camp) stepOnce(g);
+    while (g.state.battle || g.state.shop || g.state.camp || g.state.event) stepOnce(g);
     const second = g.state.choices[0]?.kind;
     if (!second) return; // 첫 전투에서 죽음
     g.choose(0);
@@ -47,7 +53,7 @@ describe("한 판", () => {
       const g = newGame(seed);
       let last = null;
       while (!g.state.dead && g.state.step < 500) {
-        if (g.state.battle || g.state.shop || g.state.camp) {
+        if (g.state.battle || g.state.shop || g.state.camp || g.state.event) {
           stepOnce(g);
           continue;
         }
@@ -122,6 +128,11 @@ describe("무적 판 없음", () => {
         else g.leaveShop();
       } else if (s.camp) {
         g.rest(p.gold >= INN_PRICE && p.hp < p.maxHp / 2 ? "inn" : "campfire");
+      } else if (s.event) {
+        // 이벤트에서는 고를 수 있는 것 중 걸음마다 다른 것 (우물 동전으로 최대 체력도 오른다)
+        const opts = eventById(s.event.id).options;
+        const ok = opts.map((_, i) => i).filter((i) => canChoose(opts[i], p));
+        g.answer(ok[(seed + s.step) % ok.length]);
       } else {
         const w = p.items.indexOf("whetstone");
         if (w >= 0) g.use(w);

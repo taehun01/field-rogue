@@ -3,9 +3,11 @@
 // 2) 단서 반복 막기: 바로 전 화면에 나온 단서 문장은 다시 안 나온다
 // 3) 연달아 같은 일 막기: 방금 벌어진 종류는 다음 화면에 안 나오고, 그 뒤로 서서히 원래 확률로 돌아온다
 // 4) 가끔 속임: 낮은 확률로 단서와 다른 일이 벌어진다 (속여도 막힌 종류는 안 벌어진다)
+// 5) 이벤트 단서는 이벤트마다 따로 있어, 고른 단서가 어떤 이벤트인지 정한다 (5단계)
 // 7단계(보스 징조·우연)는 여기에 규칙을 하나 더 얹는 식으로 들어온다.
 
 import { HINTS } from "../content/placeholder";
+import { EVENTS, eventByHint } from "../data/events";
 import type { Rng } from "./rng";
 import type { Choice, SceneKind } from "./types";
 
@@ -56,11 +58,12 @@ export function rollChoices(rng: Rng, ctx: ChoiceContext = EMPTY_CONTEXT): Choic
   while (out.length < count) {
     const hintKind = weightedPick(pool, weights, rng);
     pool.splice(pool.indexOf(hintKind), 1);
-    out.push({
-      hintKind,
-      hint: pickHint(hintKind, ctx.lastHints, rng),
-      kind: rng.next() < DECEIVE_CHANCE ? otherKind(hintKind, weights, rng) : hintKind,
-    });
+    const hint = pickHint(hintKind, ctx.lastHints, rng);
+    const kind = rng.next() < DECEIVE_CHANCE ? otherKind(hintKind, weights, rng) : hintKind;
+    const choice: Choice = { hintKind, hint, kind };
+    // 이벤트 단서면 그 이벤트가, 다른 단서에 속아 이벤트가 벌어지면 아무 이벤트나 벌어진다
+    if (kind === "event") choice.eventId = hintKind === "event" ? eventByHint(hint)!.id : rng.pick(EVENTS).id;
+    out.push(choice);
   }
   return out;
 }

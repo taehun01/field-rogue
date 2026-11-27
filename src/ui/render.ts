@@ -2,6 +2,8 @@
 // 키보드 1~9 는 .choices 안의 N번째 버튼을 누른다 (main.ts). 그래서 화면마다 버튼 순서 = 키 번호.
 
 import { CAMP_TEXT, ENEMY_STATUS, ITEM_DESC, ITEM_NAMES } from "../content/placeholder";
+import { eventById } from "../data/events";
+import { canChoose } from "../core/events";
 import { INN_PRICE, type CampOption } from "../core/game";
 import { INVENTORY_SIZE, ITEMS } from "../core/items";
 import type { BattleAction, Enemy, GameState, ItemId } from "../core/types";
@@ -15,6 +17,7 @@ export interface Handlers {
   onBuy(index: number): void;
   onLeaveShop(): void;
   onRest(option: CampOption): void;
+  onAnswer(index: number): void;
   onRestart(): void;
 }
 
@@ -89,6 +92,15 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
     return;
   }
 
+  if (s.event) {
+    eventById(s.event.id).options.forEach((opt, i) => {
+      const r = opt.require;
+      const note = r?.gold ? ` <span class="gold">${r.gold}골드</span>` : r?.item ? ` <span class="dim">(${ITEM_NAMES[r.item]} 필요)</span>` : "";
+      add(opt.label + note, () => h.onAnswer(i), !canChoose(opt, p));
+    });
+    return;
+  }
+
   // 단서만 보여 준다. 무엇이 벌어질지는 고른 뒤에 안다.
   s.choices.forEach((c, i) => add(c.hint, () => h.onChoose(i)));
 }
@@ -96,7 +108,7 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
 /** 소지품 칸. 선택지 화면에서는 회복약·숫돌을 여기서 바로 쓸 수 있다 (번호 키 없음) */
 function renderInventory(el: HTMLElement, s: GameState, h: Handlers) {
   const items = s.player.items;
-  const field = !s.dead && !s.battle && !s.shop && !s.camp;
+  const field = !s.dead && !s.battle && !s.shop && !s.camp && !s.event;
   el.innerHTML = `<span class="dim">소지품 ${items.length}/${INVENTORY_SIZE}</span>`;
   items.forEach((id, i) => {
     const usable = field && ITEMS[id].field;

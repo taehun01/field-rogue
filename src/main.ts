@@ -27,6 +27,7 @@ const handlers: Handlers = {
   onBuy: (i) => run(() => game.buy(i))(),
   onLeaveShop: run(() => game.leaveShop()),
   onRest: (o) => run(() => game.rest(o))(),
+  onAnswer: (i) => run(() => game.answer(i))(),
   onRestart: run(() => {
     game = newGame(randomSeed());
   }),
@@ -36,7 +37,7 @@ function draw() {
   render(app, game.state, ui, handlers);
 }
 
-// 키보드: 1~9 는 화면의 N번째 버튼(선택지·전투·상점·휴식 공통), 죽었으면 Enter 로 다시 시작
+// 키보드: 1~9 는 화면의 N번째 버튼(선택지·전투·상점·휴식·이벤트 공통), 죽었으면 Enter 로 다시 시작
 window.addEventListener("keydown", (e) => {
   if (game.state.dead) {
     if (e.key === "Enter") handlers.onRestart();

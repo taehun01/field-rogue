@@ -1,3 +1,4 @@
+import { eventById } from "../data/events";
 import { describe, expect, it } from "vitest";
 import { CAMPFIRE_HEAL, INN_PRICE, newGame, SHOP_STOCK, type Game } from "./game";
 import { BOMB_DAMAGE, INVENTORY_SIZE, ITEMS, POTION_HEAL, useItem } from "./items";
@@ -14,6 +15,7 @@ function reach(kind: SceneKind, seed = 1): Game {
       if (st.battle) g.act("attack");
       else if (st.shop) g.leaveShop();
       else if (st.camp) g.rest("campfire");
+      else if (st.event) g.answer(eventById(st.event.id).options.length - 1);
       else {
         const i = st.choices.findIndex((c) => c.kind === kind);
         g.choose(Math.max(0, i));
