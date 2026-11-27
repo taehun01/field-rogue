@@ -14,4 +14,7 @@ export const HINTS: Record<SceneKind, readonly string[]> = {
 
 export const OPENING = ["[임시] 눈을 뜨니 낯선 길 위다.", "어디로 갈까."];
 
+/** 단서와 다른 일이 벌어졌을 때 맨 앞에 붙는 문장 */
+export const DECEIVED = "[임시] 생각했던 것과 다르다.";
+
 export const DEATH = "[임시] 쓰러졌다. 여행은 여기서 끝난다.";

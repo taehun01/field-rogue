@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newGame, rollChoices } from "./game";
-import { createRng } from "./rng";
+import { newGame } from "./game";
 
 /** 항상 첫 번째 선택지를 고르며 죽을 때까지 돌린다 */
 function playUntilDeath(seed: number, limit = 10_000) {
@@ -8,19 +7,6 @@ function playUntilDeath(seed: number, limit = 10_000) {
   while (!g.state.dead && g.state.step < limit) g.choose(0);
   return g;
 }
-
-describe("선택지", () => {
-  it("2~3개, 같은 종류 중복 없음, 단서가 있음", () => {
-    const rng = createRng(1);
-    for (let i = 0; i < 1000; i++) {
-      const cs = rollChoices(rng);
-      expect(cs.length).toBeGreaterThanOrEqual(2);
-      expect(cs.length).toBeLessThanOrEqual(3);
-      expect(new Set(cs.map((c) => c.kind)).size).toBe(cs.length);
-      for (const c of cs) expect(c.hint.length).toBeGreaterThan(0);
-    }
-  });
-});
 
 describe("한 판", () => {
   it("같은 시드, 같은 선택이면 같은 판", () => {
@@ -31,6 +17,30 @@ describe("한 판", () => {
       b.choose(1);
     }
     expect(a.state).toEqual(b.state);
+  });
+
+  it("벌어진 종류는 since 0, 다른 종류는 한 걸음씩 늘어난다", () => {
+    const g = newGame(7);
+    const first = g.state.choices[0].kind;
+    g.choose(0);
+    expect(g.state.since[first]).toBe(0);
+    const second = g.state.choices[0].kind;
+    g.choose(0);
+    expect(g.state.since[second]).toBe(0);
+    if (!g.state.dead) expect(g.state.since[first]).toBe(first === second ? 0 : 1);
+  });
+
+  it("같은 종류가 연달아 벌어지지 않는다 (시드 200개)", () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const g = newGame(seed);
+      let last = null;
+      while (!g.state.dead && g.state.step < 500) {
+        const kind = g.state.choices[seed % g.state.choices.length].kind;
+        expect(kind).not.toBe(last);
+        g.choose(seed % g.state.choices.length);
+        last = kind;
+      }
+    }
   });
 
   it("범위 밖 선택은 무시", () => {

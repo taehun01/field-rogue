@@ -1,19 +1,11 @@
-// 장면-선택지 루프 (1단계).
+// 장면-선택지 루프 (1단계). 다음 선택지를 뽑는 규칙은 choices.ts (2단계).
 // 선택지 2~3개 → 고르면 장면 하나가 벌어짐 → 다음 선택지. 되돌아가기 없음. 체력 0이면 끝.
 // 화면과 분리된 순수 로직이라 테스트와 밸런스 시뮬레이션에서 그대로 돌릴 수 있다.
 
-import { DEATH, HINTS, OPENING } from "../content/placeholder";
+import { DEATH, DECEIVED, OPENING } from "../content/placeholder";
+import { rollChoices } from "./choices";
 import { createRng, type Rng } from "./rng";
-import type { Choice, GameState, Player, SceneKind } from "./types";
-
-/** [임시값] 장면 종류가 선택지로 나올 가중치. 플레이해 보고 조정한다. */
-export const SCENE_WEIGHTS: Record<SceneKind, number> = {
-  battle: 35,
-  event: 25,
-  rest: 15,
-  shop: 10,
-  dungeon: 15,
-};
+import type { GameState, Player, SceneKind } from "./types";
 
 /** [임시값] 시작 능력치 */
 export const START_PLAYER: Player = { hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: [] };
@@ -31,6 +23,7 @@ export function newGame(seed: number): Game {
     step: 0,
     player: structuredClone(START_PLAYER),
     choices: [],
+    since: {},
     story: [...OPENING],
     dead: false,
   };
@@ -44,6 +37,9 @@ export function newGame(seed: number): Game {
       if (!choice) return;
       state.step++;
       state.story = resolve(choice.kind, state.player, rng);
+      if (choice.kind !== choice.hintKind) state.story.unshift(DECEIVED);
+      for (const k of Object.keys(state.since) as SceneKind[]) state.since[k]! += 1;
+      state.since[choice.kind] = 0;
       if (state.player.hp <= 0) {
         state.player.hp = 0;
         state.dead = true;
@@ -51,32 +47,12 @@ export function newGame(seed: number): Game {
         state.choices = [];
         return;
       }
-      state.choices = rollChoices(rng);
+      state.choices = rollChoices(rng, {
+        since: state.since,
+        lastHints: state.choices.map((c) => c.hint),
+      });
     },
   };
-}
-
-/** 다음 선택지 2~3개. 같은 종류는 한 번에 두 번 나오지 않는다. */
-export function rollChoices(rng: Rng): Choice[] {
-  const count = rng.int(2, 3);
-  const pool = Object.keys(SCENE_WEIGHTS) as SceneKind[];
-  const out: Choice[] = [];
-  while (out.length < count) {
-    const kind = weightedPick(pool, rng);
-    pool.splice(pool.indexOf(kind), 1);
-    out.push({ kind, hint: rng.pick(HINTS[kind]) });
-  }
-  return out;
-}
-
-function weightedPick(kinds: SceneKind[], rng: Rng): SceneKind {
-  const total = kinds.reduce((sum, k) => sum + SCENE_WEIGHTS[k], 0);
-  let roll = rng.next() * total;
-  for (const k of kinds) {
-    roll -= SCENE_WEIGHTS[k];
-    if (roll < 0) return k;
-  }
-  return kinds[kinds.length - 1];
 }
 
 /**
