@@ -1,5 +1,5 @@
 // [임시 문장] 1단계에서 루프가 돌아가는지 보기 위한 자리표시 글이다.
-// 최종 문장은 Taehun이 쓴다 (CLAUDE.md 역할 분담). 이 파일만 고치면 화면 글이 바뀐다.
+// 최종 문장도 Claude가 쓰고 Taehun이 플레이하며 판단한다 (CLAUDE.md 역할 분담). 이 파일만 고치면 화면 글이 바뀐다.
 
 import type { EnemyId, ItemId, SceneKind } from "../core/types";
 
