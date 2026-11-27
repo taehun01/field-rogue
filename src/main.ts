@@ -1,11 +1,36 @@
-import { createRng, randomSeed } from "./core/rng";
+import { newGame, type Game } from "./core/game";
+import { randomSeed } from "./core/rng";
+import { render } from "./ui/render";
 
-// 0단계: 빈 화면. 1단계에서 장면-선택지 루프로 바뀐다.
 const app = document.querySelector<HTMLDivElement>("#app")!;
-const seed = randomSeed();
-const rng = createRng(seed);
 
-app.innerHTML = `
-  <h1 class="title">field-rogue</h1>
-  <p class="dim">0단계 뼈대. 시드 ${seed}, 첫 난수 ${rng.int(1, 100)}</p>
-`;
+// 주소에 ?seed=123 을 붙이면 같은 판을 다시 볼 수 있다 (버그 재현용)
+const urlSeed = Number(new URLSearchParams(location.search).get("seed"));
+let game: Game = newGame(Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : randomSeed());
+
+const handlers = {
+  onChoose(i: number) {
+    game.choose(i);
+    draw();
+  },
+  onRestart() {
+    game = newGame(randomSeed());
+    draw();
+  },
+};
+
+function draw() {
+  render(app, game.state, handlers);
+}
+
+// 키보드: 1~3 으로 선택, 죽었으면 Enter 로 다시 시작
+window.addEventListener("keydown", (e) => {
+  if (game.state.dead) {
+    if (e.key === "Enter") handlers.onRestart();
+    return;
+  }
+  const n = Number(e.key);
+  if (n >= 1 && n <= game.state.choices.length) handlers.onChoose(n - 1);
+});
+
+draw();

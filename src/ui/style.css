@@ -12,3 +12,14 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 #app { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
 .title { color: var(--accent); font-size: 28px; margin: 0 0 8px; }
 .dim { color: var(--dim); }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 12px; background: var(--panel); border: 2px solid #2e2a38; }
+.stats .hp { color: #e06c6c; }
+.stats .gold { color: var(--accent); }
+/* 도트 그래픽 자리 (1단계는 빈 칸) */
+.art { height: 160px; margin: 16px 0; background: var(--panel); border: 2px solid #2e2a38; image-rendering: pixelated; }
+.story { min-height: 96px; }
+.story p { margin: 0 0 6px; }
+.choices { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.choice { font: inherit; text-align: left; color: var(--text); background: var(--panel); border: 2px solid #2e2a38; padding: 10px 14px; cursor: pointer; }
+.choice:hover, .choice:focus-visible { border-color: var(--accent); outline: none; }
+.seed { margin-top: 24px; font-size: 14px; }
