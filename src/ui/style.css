@@ -22,4 +22,6 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 .choice { font: inherit; text-align: left; color: var(--text); background: var(--panel); border: 2px solid #2e2a38; padding: 10px 14px; cursor: pointer; }
 .choice:hover, .choice:focus-visible { border-color: var(--accent); outline: none; }
+.enemy { color: #e06c6c; margin: 0 0 8px; }
+.choice:disabled { opacity: 0.4; cursor: default; }
 .seed { margin-top: 24px; font-size: 14px; }

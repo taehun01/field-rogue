@@ -1,7 +1,7 @@
 // [임시 문장] 1단계에서 루프가 돌아가는지 보기 위한 자리표시 글이다.
 // 최종 문장은 Taehun이 쓴다 (CLAUDE.md 역할 분담). 이 파일만 고치면 화면 글이 바뀐다.
 
-import type { SceneKind } from "../core/types";
+import type { EnemyId, SceneKind } from "../core/types";
 
 /** 선택지에 보이는 짧은 단서. 종류마다 여러 개 중 하나가 무작위로 나온다. */
 export const HINTS: Record<SceneKind, readonly string[]> = {
@@ -13,6 +13,33 @@ export const HINTS: Record<SceneKind, readonly string[]> = {
 };
 
 export const OPENING = ["[임시] 눈을 뜨니 낯선 길 위다.", "어디로 갈까."];
+
+/** [임시] 적 이름 (문장 쪽에 [임시] 표시가 있으니 이름엔 붙이지 않음) */
+export const ENEMY_NAMES: Record<EnemyId, string> = {
+  weak: "약한 짐승",
+  tough: "단단한 무언가",
+  fierce: "사나운 무언가",
+};
+
+/** 적의 남은 체력 비율에 따른 묘사. 위에서부터 보고 비율이 min 이상인 첫 줄을 쓴다 */
+export const ENEMY_STATUS: readonly { min: number; text: string }[] = [
+  { min: 1, text: "멀쩡하다" },
+  { min: 0.6, text: "조금 다쳤다" },
+  { min: 0.3, text: "비틀거린다" },
+  { min: 0, text: "쓰러지기 직전이다" },
+];
+
+export const BATTLE_TEXT = {
+  start: (name: string) => `[임시] ${name}이(가) 길을 막는다.`,
+  attack: (name: string, dmg: number) => `[임시] ${name}을(를) 베었다. (${dmg})`,
+  hit: (name: string, dmg: number) => `[임시] ${name}의 공격. 체력 -${dmg}`,
+  guard: "[임시] 몸을 웅크려 막는다.",
+  potion: (heal: number) => `[임시] 회복약을 마셨다. 체력 +${heal}`,
+  noItem: "[임시] 쓸 만한 것이 없다.",
+  fled: "[임시] 등을 돌려 달아났다.",
+  fleeFailed: "[임시] 달아나려 했지만 붙잡혔다.",
+  won: (name: string, gold: number) => `[임시] ${name}을(를) 쓰러뜨렸다. 골드 +${gold}`,
+};
 
 /** 단서와 다른 일이 벌어졌을 때 맨 앞에 붙는 문장 */
 export const DECEIVED = "[임시] 생각했던 것과 다르다.";

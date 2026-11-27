@@ -2,18 +2,21 @@
 // 선택지 2~3개 → 고르면 장면 하나가 벌어짐 → 다음 선택지. 되돌아가기 없음. 체력 0이면 끝.
 // 화면과 분리된 순수 로직이라 테스트와 밸런스 시뮬레이션에서 그대로 돌릴 수 있다.
 
-import { DEATH, DECEIVED, OPENING } from "../content/placeholder";
+import { BATTLE_TEXT, DEATH, DECEIVED, OPENING } from "../content/placeholder";
+import { battleTurn, POTION, startBattle } from "./battle";
 import { rollChoices } from "./choices";
 import { createRng, type Rng } from "./rng";
-import type { GameState, Player, SceneKind } from "./types";
+import type { BattleAction, GameState, Player, SceneKind } from "./types";
 
 /** [임시값] 시작 능력치 */
-export const START_PLAYER: Player = { hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: [] };
+export const START_PLAYER: Player = { hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: [POTION] };
 
 export interface Game {
   readonly state: GameState;
-  /** 선택지 index 를 고른다. 죽었거나 범위 밖이면 아무 일도 없다. */
+  /** 선택지 index 를 고른다. 전투 중이거나 죽었거나 범위 밖이면 아무 일도 없다. */
   choose(index: number): void;
+  /** 전투 행동을 한다. 전투 중이 아니면 아무 일도 없다. */
+  act(action: BattleAction): void;
 }
 
 export function newGame(seed: number): Game {
@@ -22,53 +25,71 @@ export function newGame(seed: number): Game {
     seed,
     step: 0,
     player: structuredClone(START_PLAYER),
+    battle: null,
     choices: [],
     since: {},
+    lastHints: [],
     story: [...OPENING],
     dead: false,
   };
   state.choices = rollChoices(rng);
 
+  /** 체력이 0 이하면 죽음 처리하고 true */
+  function checkDeath(): boolean {
+    if (state.player.hp > 0) return false;
+    state.player.hp = 0;
+    state.dead = true;
+    state.battle = null;
+    state.story.push(DEATH);
+    state.choices = [];
+    return true;
+  }
+
+  function nextChoices() {
+    state.choices = rollChoices(rng, { since: state.since, lastHints: state.lastHints });
+  }
+
   return {
     state,
     choose(index) {
-      if (state.dead) return;
+      if (state.dead || state.battle) return;
       const choice = state.choices[index];
       if (!choice) return;
       state.step++;
-      state.story = resolve(choice.kind, state.player, rng);
-      if (choice.kind !== choice.hintKind) state.story.unshift(DECEIVED);
       for (const k of Object.keys(state.since) as SceneKind[]) state.since[k]! += 1;
       state.since[choice.kind] = 0;
-      if (state.player.hp <= 0) {
-        state.player.hp = 0;
-        state.dead = true;
-        state.story.push(DEATH);
+      state.lastHints = state.choices.map((c) => c.hint);
+
+      if (choice.kind === "battle") {
+        state.battle = startBattle(rng);
+        state.story = [BATTLE_TEXT.start(state.battle.enemy.name)];
         state.choices = [];
-        return;
+      } else {
+        state.story = resolve(choice.kind, state.player, rng);
+        if (!checkDeath()) nextChoices();
       }
-      state.choices = rollChoices(rng, {
-        since: state.since,
-        lastHints: state.choices.map((c) => c.hint),
-      });
+      if (choice.kind !== choice.hintKind) state.story.unshift(DECEIVED);
+    },
+    act(action) {
+      if (state.dead || !state.battle) return;
+      const { lines, outcome } = battleTurn(state.battle, state.player, action, rng);
+      state.story = lines;
+      if (checkDeath()) return;
+      if (outcome !== "ongoing") {
+        state.battle = null;
+        nextChoices();
+      }
     },
   };
 }
 
 /**
  * 장면 하나를 처리하고 보여줄 문장을 돌려준다. player 를 직접 바꾼다.
- * 1단계에서는 전부 자리표시: 전투는 자동 정산, 상점·던전은 입구만.
- * 2단계 이후 종류별로 제대로 된 처리(턴제 전투, 상점 화면, 던전 방)로 바뀐다.
+ * 전투는 battle.ts (3단계). 나머지는 아직 자리표시: 상점·던전은 입구만.
+ * 4단계 이후 종류별로 제대로 된 처리(상점 화면, 던전 방)로 바뀐다.
  */
-function resolve(kind: SceneKind, p: Player, rng: Rng): string[] {
+function resolve(kind: Exclude<SceneKind, "battle">, p: Player, rng: Rng): string[] {
   switch (kind) {
-    case "battle": {
-      const dmg = Math.max(1, rng.int(3, 7) - p.def);
-      const gold = rng.int(3, 8);
-      p.hp -= dmg;
-      p.gold += gold;
-      return [`[임시] 무언가와 싸웠다. 체력 -${dmg}, 골드 +${gold}`];
-    }
     case "event": {
       if (rng.next() < 0.5) {
         const gold = rng.int(2, 6);
