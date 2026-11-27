@@ -32,3 +32,6 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .item:disabled { color: var(--dim); cursor: default; }
 /* 던전 안 표시 (6단계) */
 .stats .dungeon { color: #8fb3d9; }
+/* 보스 (7단계) */
+.choice .omen { color: #b48ad9; }
+.enemy.boss { color: #ff4d4d; font-weight: bold; }

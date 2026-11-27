@@ -25,9 +25,13 @@ export interface Choice {
   kind: SceneKind;
   /** kind 가 "event" 면 벌어질 이벤트 id (data/events.ts) */
   eventId?: string;
+  /** 단서 뒤에 붙은 징조 문장 (7단계). 고르면 징조 수가 오른다 */
+  omen?: string;
+  /** 우연히 섞인 보스 단서 (7단계). 고르면 보스와 싸운다. 이때 hintKind·kind 는 "battle" */
+  boss?: true;
 }
 
-export type EnemyId = "weak" | "tough" | "fierce";
+export type EnemyId = "weak" | "tough" | "fierce" | "boss";
 
 export interface Enemy {
   id: EnemyId;
@@ -57,8 +61,10 @@ export interface Dungeon {
   rooms: number;
   /** 지나온 방 수 */
   cleared: number;
-  /** 지금 고를 갈림길. 방 안에서 일이 벌어지는 중이면 빈 배열 */
+  /** 지금 고를 갈림길. 방 안에서 일이 벌어지는 중이거나 끝에 닿았으면 빈 배열 */
   choices: RoomChoice[];
+  /** 끝 상자를 열고 "더 깊이 들어간다 / 나간다"를 고르는 중 (7단계 던전 길) */
+  deep?: true;
 }
 
 export type BattleAction = "attack" | "guard" | "item" | "flee";
@@ -66,6 +72,21 @@ export type BattleAction = "attack" | "guard" | "item" | "flee";
 /** 진행 중인 전투. 전투 중에는 선택지 대신 전투 행동을 고른다 */
 export interface Battle {
   enemy: Enemy;
+  /** 보스전이면 true (도망 확률이 다르고, 이기면 보상이 따로 있다) */
+  boss?: true;
+}
+
+/** 보스와 만나는 네 가지 길 (7단계, core/boss.ts) */
+export type BossPath = "omen" | "rumor" | "chance" | "deep";
+
+/** 보스에 얽힌 숨은 수치 */
+export interface BossState {
+  /** 지금까지 고른 징조 수 */
+  omens: number;
+  /** 소문 수치 */
+  rumor: number;
+  /** 어느 길로 만났나. 만났으면 모든 길이 닫힌다 */
+  met: BossPath | null;
 }
 
 export interface GameState {
@@ -81,6 +102,7 @@ export interface GameState {
   event: { id: string } | null;
   /** 던전 안이면 그 상태. 아니면 null */
   dungeon: Dungeon | null;
+  boss: BossState;
   /** 쉴 곳에 와서 모닥불/여관을 고르는 중 */
   camp: boolean;
   /** 지금 고를 수 있는 선택지 2~3개. 전투·상점·휴식·이벤트 중이거나 죽었으면 빈 배열 */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { battleTurn, ENEMIES, enemyScale, FLEE_CHANCE, SCALE_EVERY, startBattle } from "./battle";
+import { battleTurn, type NormalEnemyId, ENEMIES, enemyScale, FLEE_CHANCE, SCALE_EVERY, startBattle } from "./battle";
 import { POTION_HEAL } from "./items";
 import { createRng } from "./rng";
 import type { Battle, Player } from "./types";
@@ -19,7 +19,7 @@ describe("적", () => {
     for (let i = 0; i < 500; i++) {
       const b = startBattle(rng);
       seen.add(b.enemy.id);
-      expect(b.enemy.hp).toBe(ENEMIES[b.enemy.id].maxHp);
+      expect(b.enemy.hp).toBe(ENEMIES[b.enemy.id as NormalEnemyId].maxHp);
     }
     expect(seen.size).toBe(3);
   });

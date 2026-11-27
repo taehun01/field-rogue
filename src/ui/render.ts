@@ -1,7 +1,7 @@
 // 화면 그리기. 상태를 읽어 DOM 을 통째로 다시 그린다 (텍스트 게임이라 이 정도로 충분).
 // 키보드 1~9 는 .choices 안의 N번째 버튼을 누른다 (main.ts). 그래서 화면마다 버튼 순서 = 키 번호.
 
-import { CAMP_TEXT, ENEMY_STATUS, ITEM_DESC, ITEM_NAMES } from "../content/placeholder";
+import { BOSS_TEXT, CAMP_TEXT, ENEMY_STATUS, ITEM_DESC, ITEM_NAMES } from "../content/placeholder";
 import { eventById } from "../data/events";
 import { canChoose } from "../core/events";
 import { INN_PRICE, type CampOption } from "../core/game";
@@ -20,6 +20,7 @@ export interface Handlers {
   onAnswer(index: number): void;
   onEnterRoom(index: number): void;
   onLeaveDungeon(): void;
+  onGoDeeper(): void;
   onRestart(): void;
 }
 
@@ -38,6 +39,7 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
       <span class="gold">골드 ${p.gold}</span>
       <span class="dim">${s.step}걸음</span>
       ${s.dungeon ? `<span class="dungeon">던전 안</span>` : ""}
+      ${import.meta.env.DEV ? `<span class="dim debug">[징조 ${s.boss.omens} 소문 ${s.boss.rumor}${s.boss.met ? ` 보스:${s.boss.met}` : ""}]</span>` : ""}
     </header>
     <div class="art" aria-hidden="true"></div>
     ${s.battle ? enemyLine(s.battle.enemy) : ""}
@@ -104,6 +106,13 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
     return;
   }
 
+  // 던전 끝 상자를 연 뒤: 더 깊이(보스) 또는 나가기
+  if (s.dungeon?.deep) {
+    add(BOSS_TEXT.deepLabel, h.onGoDeeper);
+    add(BOSS_TEXT.outLabel, h.onLeaveDungeon);
+    return;
+  }
+
   // 던전 갈림길: 단서 2개 + 나가기 (남은 방 수는 숨긴다)
   if (s.dungeon) {
     s.dungeon.choices.forEach((c, i) => add(c.hint, () => h.onEnterRoom(i)));
@@ -112,7 +121,8 @@ export function render(root: HTMLElement, s: GameState, ui: UiState, h: Handlers
   }
 
   // 단서만 보여 준다. 무엇이 벌어질지는 고른 뒤에 안다.
-  s.choices.forEach((c, i) => add(c.hint, () => h.onChoose(i)));
+  // 징조가 붙은 단서는 뒤에 징조 문장이 따라붙는다
+  s.choices.forEach((c, i) => add(c.omen ? `${c.hint} <span class="omen">— ${c.omen}</span>` : c.hint, () => h.onChoose(i)));
 }
 
 /** 소지품 칸. 선택지 화면과 던전 갈림길에서는 회복약·숫돌·심장을 여기서 바로 쓸 수 있다 (번호 키 없음) */
@@ -151,5 +161,5 @@ function enemyLine(e: Enemy): string {
   const debug = import.meta.env.DEV
     ? ` <span class="dim debug">[체력 ${e.hp}/${e.maxHp} 공 ${e.atk} 방 ${e.def}]</span>`
     : "";
-  return `<p class="enemy">${e.name} — ${status}${debug}</p>`;
+  return `<p class="enemy${e.id === "boss" ? " boss" : ""}">${e.name} — ${status}${debug}</p>`;
 }

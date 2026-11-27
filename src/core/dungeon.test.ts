@@ -103,6 +103,8 @@ describe("던전 진행", () => {
           expect(g.state.player.gold - goldBefore).toBeGreaterThanOrEqual(REWARD_GOLD[0]);
         }
       }
+      // 끝 상자를 연 뒤 "더 깊이 / 나간다" 화면이면 나간다 (보스를 이미 만났으면 이 화면 없이 바로 나와 있다)
+      if (g.state.dungeon?.deep) g.leaveDungeon();
       expect(g.state.dungeon).toBeNull();
       expect(g.state.choices.length).toBeGreaterThanOrEqual(2);
       // 방 안 이벤트에서 아이템을 얻을 일은 없으므로 보상 하나만 들어 있다
@@ -139,6 +141,7 @@ describe("던전 진행", () => {
     g.state.player.items = Array(INVENTORY_SIZE).fill("bomb");
     const rooms = g.state.dungeon!.rooms;
     for (let i = 0; i < rooms; i++) clearRoom(g);
+    if (g.state.dungeon?.deep) g.leaveDungeon();
     expect(g.state.dungeon).toBeNull();
     expect(g.state.player.items.length).toBe(INVENTORY_SIZE);
   });

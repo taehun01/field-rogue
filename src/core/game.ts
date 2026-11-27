@@ -2,10 +2,12 @@
 // 선택지 2~3개 → 고르면 장면 하나가 벌어짐 → 다음 선택지. 되돌아가기 없음. 체력 0이면 끝.
 // 전투(3단계), 상점·휴식(4단계), 이벤트(5단계)는 선택지 대신 자기 화면을 띄우고, 끝나면 다음 선택지로 돌아온다.
 // 던전(6단계)은 안에서 갈림길을 고르며 방을 지나고, 방 안의 전투·이벤트가 끝나면 필드 대신 던전 갈림길로 돌아온다.
+// 보스(7단계)는 네 가지 길로 만난다 (core/boss.ts). 보스전이 끝나면 던전 안이었어도 바깥 선택지로 나온다.
 // 화면과 분리된 순수 로직이라 테스트와 밸런스 시뮬레이션에서 그대로 돌릴 수 있다.
 
 import {
   BATTLE_TEXT,
+  BOSS_TEXT,
   CAMP_TEXT,
   DEATH,
   DECEIVED,
@@ -16,13 +18,14 @@ import {
   SHOP_TEXT,
 } from "../content/placeholder";
 import { battleTurn, startBattle } from "./battle";
+import { BOSS_PATHS, BOSS_REWARD_ITEM, OMEN_NEEDED, RUMOR_GAIN, RUMOR_LIMIT, startBoss } from "./boss";
 import { rollChoices } from "./choices";
 import { EMPTY_ROOM_GOLD, newDungeon, rollReward, rollRoomChoices } from "./dungeon";
 import { eventById } from "../data/events";
 import { resolveOption } from "./events";
 import { CHARM_REVIVE, INVENTORY_SIZE, ITEMS, SHOP_ITEM_IDS, useItem } from "./items";
 import { createRng, type Rng } from "./rng";
-import type { BattleAction, GameState, ItemId, Player, SceneKind } from "./types";
+import type { BattleAction, BossPath, GameState, ItemId, Player, SceneKind } from "./types";
 
 /** [임시값] 시작 능력치 */
 export const START_PLAYER: Player = { hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: ["potion"] };
@@ -54,8 +57,10 @@ export interface Game {
   answer(index: number): void;
   /** 던전 갈림길 index 번으로 들어간다. */
   enterRoom(index: number): void;
-  /** 던전 갈림길 화면에서 밖으로 나간다 (끝 보상 없음). */
+  /** 던전 갈림길 화면에서 밖으로 나간다 (끝 보상 없음). 끝 상자를 연 뒤라면 그냥 나간다. */
   leaveDungeon(): void;
+  /** 던전 끝 상자를 연 뒤 더 깊이 들어간다 (보스). */
+  goDeeper(): void;
 }
 
 export function newGame(seed: number): Game {
@@ -69,13 +74,13 @@ export function newGame(seed: number): Game {
     camp: false,
     event: null,
     dungeon: null,
+    boss: { omens: 0, rumor: 0, met: null },
     choices: [],
     since: {},
     lastHints: [],
     story: [...OPENING],
     dead: false,
   };
-  state.choices = rollChoices(rng);
   const p = state.player;
 
   /** 선택지 화면이 아닌 다른 화면(전투·상점·휴식·이벤트) 중인가 */
@@ -107,8 +112,42 @@ export function newGame(seed: number): Game {
     return true;
   }
 
+  /** 보스 길이 열려 있나: 켜져 있고, 아직 보스를 만나지 않았다 */
+  const open = (path: BossPath) => BOSS_PATHS[path] && state.boss.met === null;
+
+  /** 보스와 마주친다. lines 는 이야기 칸에 덧붙일 만남 문장 */
+  function meetBoss(path: BossPath, lines: readonly string[]) {
+    state.boss.met = path;
+    state.since.battle = 0; // 보스전도 전투라서 다음 화면엔 전투가 안 나온다
+    state.battle = startBoss(state.step);
+    state.choices = [];
+    state.story.push(...lines, BOSS_TEXT.start);
+  }
+
+  /** 다음 선택지. 소문이 기준을 넘었으면 선택지 대신 보스가 찾아온다 */
   function nextChoices() {
-    state.choices = rollChoices(rng, { since: state.since, lastHints: state.lastHints });
+    if (open("rumor") && state.boss.rumor >= RUMOR_LIMIT) {
+      meetBoss("rumor", BOSS_TEXT.rumorMet);
+      return;
+    }
+    state.choices = rollChoices(rng, {
+      since: state.since,
+      lastHints: state.lastHints,
+      omen: open("omen"),
+      chance: open("chance"),
+    });
+  }
+
+  /** 보스전이 끝났다 (이겼거나 달아났다). 던전 안이었어도 밖으로 나와 다음 선택지 */
+  function bossDone(won: boolean) {
+    if (won) {
+      const fits = p.items.length < INVENTORY_SIZE;
+      if (fits) p.items.push(BOSS_REWARD_ITEM);
+      state.story.push(fits ? `${BOSS_TEXT.won} ${ITEM_NAMES[BOSS_REWARD_ITEM]} +1` : BOSS_TEXT.rewardFull);
+    }
+    state.dungeon = null;
+    state.story.push(BOSS_TEXT.after);
+    nextChoices();
   }
 
   /** 장면(전투·이벤트)이 끝났다. 던전 안이면 방 하나를 지난 것이고, 아니면 다음 선택지 */
@@ -130,14 +169,21 @@ export function newGame(seed: number): Game {
     p.gold += gold;
     const fits = p.items.length < INVENTORY_SIZE;
     if (fits) p.items.push(item);
-    state.story.push(
-      DUNGEON_TEXT.treasure,
-      (fits ? DUNGEON_TEXT.reward : DUNGEON_TEXT.rewardFull)(gold, ITEM_NAMES[item]),
-      DUNGEON_TEXT.out,
-    );
+    state.story.push(DUNGEON_TEXT.treasure, (fits ? DUNGEON_TEXT.reward : DUNGEON_TEXT.rewardFull)(gold, ITEM_NAMES[item]));
+    // 던전 길이 열려 있으면 바로 나가지 않고 더 깊이 갈지 묻는다
+    if (open("deep")) {
+      d.choices = [];
+      d.deep = true;
+      state.story.push(BOSS_TEXT.deepAsk);
+      return;
+    }
+    state.story.push(DUNGEON_TEXT.out);
     state.dungeon = null;
     nextChoices();
   }
+
+  // 첫 화면도 같은 규칙으로 (징조·우연이 섞일 수 있다)
+  nextChoices();
 
   return {
     state,
@@ -150,6 +196,21 @@ export function newGame(seed: number): Game {
       state.since[choice.kind] = 0;
       state.lastHints = state.choices.map((c) => c.hint);
       state.choices = [];
+
+      if (choice.boss && open("chance")) {
+        state.story = [];
+        meetBoss("chance", BOSS_TEXT.chanceMet);
+        return;
+      }
+      // 징조가 다 차면 고른 장면 대신 보스
+      const omen = choice.omen !== undefined && open("omen");
+      if (omen && ++state.boss.omens >= OMEN_NEEDED) {
+        state.story = [];
+        meetBoss("omen", BOSS_TEXT.omenMet);
+        return;
+      }
+      if (choice.kind === "battle") state.boss.rumor += RUMOR_GAIN.battle;
+      if (choice.kind === "dungeon") state.boss.rumor += RUMOR_GAIN.dungeon;
 
       switch (choice.kind) {
         case "battle":
@@ -175,6 +236,7 @@ export function newGame(seed: number): Game {
           state.story = [...DUNGEON_TEXT.enter];
       }
       if (choice.kind !== choice.hintKind) state.story.unshift(DECEIVED);
+      if (omen) state.story.unshift(BOSS_TEXT.omenSeen(state.boss.omens));
     },
 
     act(action, itemIndex = 0) {
@@ -183,8 +245,10 @@ export function newGame(seed: number): Game {
       state.story = lines;
       if (checkDeath()) return;
       if (outcome !== "ongoing") {
+        const boss = state.battle.boss === true;
         state.battle = null;
-        sceneDone();
+        if (boss) bossDone(outcome === "won");
+        else sceneDone();
       }
     },
 
@@ -228,6 +292,7 @@ export function newGame(seed: number): Game {
       state.story = result.lines;
       if (checkDeath()) return;
       if (result.battle) {
+        state.boss.rumor += RUMOR_GAIN.battle;
         state.battle = startBattle(rng, state.step);
         state.story.push(BATTLE_TEXT.start(state.battle.enemy.name));
       } else {
@@ -245,6 +310,7 @@ export function newGame(seed: number): Game {
       d.choices = [];
       switch (room.kind) {
         case "battle":
+          state.boss.rumor += RUMOR_GAIN.battle;
           state.battle = startBattle(rng, state.step);
           state.story = [BATTLE_TEXT.start(state.battle.enemy.name)];
           break;
@@ -266,9 +332,17 @@ export function newGame(seed: number): Game {
 
     leaveDungeon() {
       if (state.dead || !atFork()) return;
+      const end = state.dungeon!.deep === true;
       state.dungeon = null;
-      state.story = [DUNGEON_TEXT.leave];
+      state.story = [end ? DUNGEON_TEXT.out : DUNGEON_TEXT.leave];
       nextChoices();
+    },
+
+    goDeeper() {
+      if (state.dead || !atFork() || !state.dungeon!.deep) return;
+      delete state.dungeon!.deep;
+      state.story = [];
+      meetBoss("deep", BOSS_TEXT.deepMet);
     },
 
     rest(option) {

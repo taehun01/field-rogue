@@ -3,12 +3,16 @@
 // 화면과 분리된 순수 로직: 시뮬레이션에서 그대로 돌린다.
 
 import { BATTLE_TEXT, ENEMY_NAMES } from "../content/placeholder";
+import { BOSS_FLEE_CHANCE } from "./boss";
 import { useItem } from "./items";
 import type { Rng } from "./rng";
 import type { Battle, BattleAction, Enemy, EnemyId, Player } from "./types";
 
 /** [임시값] 적 3종. 이름·묘사 문장은 content 쪽에 있다. */
-export const ENEMIES: Record<EnemyId, Omit<Enemy, "id" | "name" | "hp">> = {
+/** 보통 적 (보스는 boss.ts) */
+export type NormalEnemyId = Exclude<EnemyId, "boss">;
+
+export const ENEMIES: Record<NormalEnemyId, Omit<Enemy, "id" | "name" | "hp">> = {
   // 약하고 흔하다
   weak: { maxHp: 8, atk: 4, def: 0, gold: [3, 6] },
   // 오래 버틴다. 방어가 높아 한 대가 약하게 들어간다
@@ -18,9 +22,9 @@ export const ENEMIES: Record<EnemyId, Omit<Enemy, "id" | "name" | "hp">> = {
 };
 
 /** [임시값] 적이 나올 가중치 */
-export const ENEMY_WEIGHTS: Record<EnemyId, number> = { weak: 50, tough: 25, fierce: 25 };
+export const ENEMY_WEIGHTS: Record<NormalEnemyId, number> = { weak: 50, tough: 25, fierce: 25 };
 
-/** [임시값] 도망 성공 확률 */
+/** [임시값] 도망 성공 확률. 보스는 boss.ts BOSS_FLEE_CHANCE */
 export const FLEE_CHANCE = 0.5;
 
 /**
@@ -36,7 +40,7 @@ export function enemyScale(step: number): number {
 }
 
 export function startBattle(rng: Rng, step = 0): Battle {
-  const ids = Object.keys(ENEMY_WEIGHTS) as EnemyId[];
+  const ids = Object.keys(ENEMY_WEIGHTS) as NormalEnemyId[];
   let roll = rng.next() * ids.reduce((s, k) => s + ENEMY_WEIGHTS[k], 0);
   let id = ids[ids.length - 1];
   for (const k of ids) {
@@ -94,7 +98,7 @@ export function battleTurn(
       break;
     }
     case "flee":
-      if (rng.next() < FLEE_CHANCE) {
+      if (rng.next() < (b.boss ? BOSS_FLEE_CHANCE : FLEE_CHANCE)) {
         lines.push(BATTLE_TEXT.fled);
         return { lines, outcome: "fled" };
       }

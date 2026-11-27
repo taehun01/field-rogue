@@ -7,13 +7,14 @@ import { INVENTORY_SIZE, ITEMS } from "./items";
 /** 이벤트의 마지막 고를 거리 (늘 "지나간다", 조건 없음) */
 const lastOption = (g: Game) => eventById(g.state.event!.id).options.length - 1;
 
-/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 던전이면 index 번 갈림길, 아니면 index 번 선택지 */
+/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 던전이면 index 번 갈림길(끝에 닿았으면 나감), 아니면 index 번 선택지 */
 function stepOnce(g: Game, index = 0) {
   const s = g.state;
   if (s.battle) g.act("attack");
   else if (s.shop) g.leaveShop();
   else if (s.camp) g.rest("campfire");
   else if (s.event) g.answer(lastOption(g));
+  else if (s.dungeon?.deep) g.leaveDungeon();
   else if (s.dungeon) g.enterRoom(index % s.dungeon.choices.length);
   else g.choose(index % s.choices.length);
 }
@@ -136,7 +137,7 @@ describe("무적 판 없음", () => {
         g.answer(ok[(seed + s.step) % ok.length]);
       } else if (s.dungeon) {
         // 던전은 체력이 넉넉할 때만 끝까지, 아니면 나간다
-        if (low) g.leaveDungeon();
+        if (low || s.dungeon.deep) g.leaveDungeon();
         else g.enterRoom(s.step % s.dungeon.choices.length);
       } else {
         const w = p.items.findIndex((id) => id === "whetstone" || id === "heart");

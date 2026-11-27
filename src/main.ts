@@ -30,6 +30,7 @@ const handlers: Handlers = {
   onAnswer: (i) => run(() => game.answer(i))(),
   onEnterRoom: (i) => run(() => game.enterRoom(i))(),
   onLeaveDungeon: run(() => game.leaveDungeon()),
+  onGoDeeper: run(() => game.goDeeper()),
   onRestart: run(() => {
     game = newGame(randomSeed());
   }),
