@@ -1,45 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { battleTurn, type NormalEnemyId, ENEMIES, enemyScale, FLEE_CHANCE, SCALE_EVERY, startBattle } from "./battle";
+import { REGIONS, REGION_IDS } from "../data/regions";
+import { battleTurn, ENEMY_LEVEL, enemyScale, FLEE_CHANCE, GUARD_RATE, startBattle, startBattleWith } from "./battle";
 import { POTION_HEAL } from "./items";
+import { newPlayer } from "./player";
 import { createRng } from "./rng";
 import type { Battle, Player } from "./types";
 
-const player = (over: Partial<Player> = {}): Player => ({
-  hp: 20, maxHp: 20, atk: 3, def: 1, gold: 0, items: ["potion"], ...over,
-});
+// 낡은 손도끼(공격 3), 해진 털옷(방어 1)
+const player = (over: Partial<Player> = {}): Player => ({ ...newPlayer("northman"), hp: 20, maxHp: 20, bag: ["potion"], ...over });
 
 const battle = (over: Partial<Battle["enemy"]> = {}): Battle => ({
   enemy: { id: "weak", name: "적", hp: 8, maxHp: 8, atk: 4, def: 0, gold: [3, 6], ...over },
 });
 
 describe("적", () => {
-  it("3종이 모두 나오고, 체력이 가득 찬 채 시작한다", () => {
+  it("지역마다 그 지역 적 3종이 모두 나오고, 체력이 가득 찬 채 시작한다", () => {
     const rng = createRng(1);
-    const seen = new Set<string>();
-    for (let i = 0; i < 500; i++) {
-      const b = startBattle(rng);
-      seen.add(b.enemy.id);
-      expect(b.enemy.hp).toBe(ENEMIES[b.enemy.id as NormalEnemyId].maxHp);
+    for (const r of REGION_IDS) {
+      const defs = REGIONS[r].enemies;
+      expect(defs.length).toBe(3);
+      const seen = new Set<string>();
+      for (let i = 0; i < 500; i++) {
+        const b = startBattle(rng, r);
+        seen.add(b.enemy.id);
+        expect(b.enemy.hp).toBe(defs.find((d) => d.id === b.enemy.id)!.maxHp);
+      }
+      expect(seen.size).toBe(3);
     }
-    expect(seen.size).toBe(3);
+  });
+
+  it("이벤트가 정한 적, 던전 우두머리도 id 로 열 수 있다", () => {
+    expect(startBattleWith("troll").enemy.name).toBe("서리 트롤");
+    expect(startBattleWith(REGIONS.bones.dungeon.chief.id).enemy.name).toBe(REGIONS.bones.dungeon.chief.name);
   });
 });
 
-describe("멀리 갈수록 강해지는 적", () => {
-  it(`${SCALE_EVERY}걸음 전까지는 원래 수치, 그 뒤로 체력·공격이 오른다 (방어·골드는 그대로)`, () => {
-    expect(enemyScale(0)).toBe(1);
-    expect(enemyScale(SCALE_EVERY - 1)).toBe(1);
-    expect(enemyScale(SCALE_EVERY)).toBeGreaterThan(1);
+describe("레벨에 맞춰 강해지는 적", () => {
+  it("레벨 1은 원래 수치, 레벨이 오를수록 체력·공격이 오르고 방어는 가끔 오른다", () => {
+    expect(enemyScale(1)).toBe(1);
+    expect(enemyScale(2)).toBeCloseTo(1 + ENEMY_LEVEL.early);
+    // 꺾이는 곳 뒤로는 천천히 오른다
+    const k = ENEMY_LEVEL.knee;
+    expect(enemyScale(k + 1) - enemyScale(k)).toBeCloseTo(ENEMY_LEVEL.late);
 
-    // 같은 시드면 같은 적이 뽑히므로 걸음 수만 바꿔 비교한다
-    const early = startBattle(createRng(9), 0).enemy;
-    const late = startBattle(createRng(9), SCALE_EVERY * 10).enemy;
-    expect(late.id).toBe(early.id);
-    expect(late.maxHp).toBeGreaterThan(early.maxHp);
-    expect(late.hp).toBe(late.maxHp);
-    expect(late.atk).toBeGreaterThan(early.atk);
-    expect(late.def).toBe(early.def);
-    expect(late.gold).toEqual(early.gold);
+    // 같은 시드면 같은 적이 뽑히므로 레벨만 바꿔 비교한다
+    const low = startBattle(createRng(9), "pines", 1).enemy;
+    const high = startBattle(createRng(9), "pines", 10).enemy;
+    expect(high.id).toBe(low.id);
+    expect(high.maxHp).toBeGreaterThan(low.maxHp);
+    expect(high.hp).toBe(high.maxHp);
+    expect(high.atk).toBeGreaterThan(low.atk);
+    expect(high.def).toBeGreaterThan(low.def);
+    expect(high.gold).toEqual(low.gold); // 골드는 레벨을 따라 오르지 않는다
+  });
+
+  it("지역과 상관없이 같은 레벨이면 같은 배율이다", () => {
+    for (const r of REGION_IDS) {
+      const e = startBattle(createRng(1), r, 5).enemy;
+      const def = REGIONS[r].enemies.find((d) => d.id === e.id)!;
+      expect(e.maxHp).toBe(Math.ceil(def.maxHp * enemyScale(5)));
+    }
   });
 });
 
@@ -54,22 +74,22 @@ describe("행동", () => {
     expect(p.gold).toBeGreaterThanOrEqual(3);
   });
 
-  it("방어: 받는 피해가 절반(올림)", () => {
+  it("방어: 받는 피해가 무기에 따라 줄어든다 (한손 낡은 손도끼)", () => {
     const p = player();
     battleTurn(battle({ atk: 9 }), p, "guard", createRng(3));
     const guarded = 20 - p.hp;
-    // 방어 없이 맞는 피해는 atk 9 - def 1 ±1 = 7~9 → 절반 올림 4~5
-    expect(guarded).toBeGreaterThanOrEqual(4);
-    expect(guarded).toBeLessThanOrEqual(5);
+    // 방어 없이 맞는 피해는 atk 9 - def 1 ±1 = 7~9 → 한손 비율을 곱해 올림
+    expect(guarded).toBeGreaterThanOrEqual(Math.ceil(7 * GUARD_RATE.one));
+    expect(guarded).toBeLessThanOrEqual(Math.ceil(9 * GUARD_RATE.one));
   });
 
   it("아이템: 회복약을 쓰면 회복하고 하나 줄어든다. 없으면 턴을 쓰지 않는다", () => {
     const p = player({ hp: 5 });
     battleTurn(battle({ atk: 1 }), p, "item", createRng(4));
-    expect(p.items).toEqual([]);
+    expect(p.bag).toEqual([]);
     expect(p.hp).toBe(5 + POTION_HEAL - 1); // 적 공격 1 (최소 피해)
 
-    const empty = player({ items: [] });
+    const empty = player({ bag: [] });
     const r = battleTurn(battle(), empty, "item", createRng(4));
     expect(r.outcome).toBe("ongoing");
     expect(empty.hp).toBe(20);

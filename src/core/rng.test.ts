@@ -28,3 +28,17 @@ describe("createRng", () => {
     expect(() => createRng(1).pick([])).toThrow();
   });
 });
+
+import { josa } from "../content/text";
+
+describe("조사", () => {
+  it("받침에 따라 조사를 고른다", () => {
+    expect(josa("늑대", "이/가")).toBe("늑대가");
+    expect(josa("서리 트롤", "이/가")).toBe("서리 트롤이");
+    expect(josa("바다 까마귀 떼", "을/를")).toBe("바다 까마귀 떼를");
+    expect(josa("서리항", "으로/로")).toBe("서리항으로");
+    expect(josa("송진골", "으로/로")).toBe("송진골로");
+    expect(josa("뼈울타리", "으로/로")).toBe("뼈울타리로");
+    expect(josa("회복약", "은/는")).toBe("회복약은");
+  });
+});

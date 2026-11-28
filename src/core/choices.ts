@@ -4,14 +4,12 @@
 // 3) 연달아 같은 일 막기: 방금 벌어진 종류는 다음 화면에 안 나오고, 그 뒤로 서서히 원래 확률로 돌아온다
 // 4) 가끔 속임: 낮은 확률로 단서와 다른 일이 벌어진다 (속여도 막힌 종류는 안 벌어진다)
 // 5) 이벤트 단서는 이벤트마다 따로 있어, 고른 단서가 어떤 이벤트인지 정한다 (5단계)
-// 6) 보스 징조: 열려 있으면 선택지마다 낮은 확률로 단서 뒤에 징조가 붙는다 (7단계, core/boss.ts)
-// 7) 보스 우연: 열려 있으면 드물게 마지막 선택지가 보스 단서로 바뀐다 (보스 단서는 속이지 않고, 전투가 막힌 화면엔 안 나온다)
+// 6) 단서와 이벤트는 지금 걸음의 지역 것만 나온다 (F1, data/regions.ts)
 
-import { BOSS_TEXT, HINTS } from "../content/placeholder";
-import { BOSS_CHANCE, OMEN_CHANCE, rollOmen } from "./boss";
-import { FIELD_EVENTS, eventByHint } from "../data/events";
+import { eventByHint, fieldEvents } from "../data/events";
+import { REGIONS } from "../data/regions";
 import type { Rng } from "./rng";
-import type { Choice, SceneKind } from "./types";
+import type { Choice, RegionId, SceneKind } from "./types";
 
 /** [임시값] 장면 종류가 선택지로 나올 가중치. 플레이해 보고 조정한다. */
 export const SCENE_WEIGHTS: Record<SceneKind, number> = {
@@ -37,12 +35,16 @@ export interface ChoiceContext {
   since: Partial<Record<SceneKind, number>>;
   /** 바로 전 화면에 보였던 단서 문장들 */
   lastHints: readonly string[];
-  /** 보스 징조·우연 길이 열려 있나. 없으면 닫힘 */
-  omen?: boolean;
-  chance?: boolean;
+  /** 이 걸음이 어느 지역인가 */
+  region: RegionId;
 }
 
-export const EMPTY_CONTEXT: ChoiceContext = { since: {}, lastHints: [] };
+export const EMPTY_CONTEXT: ChoiceContext = { since: {}, lastHints: [], region: "harbor" };
+
+/** region 지역 길에서 kind 종류의 단서들 */
+export function hintsFor(region: RegionId, kind: SceneKind): readonly string[] {
+  return kind === "event" ? fieldEvents(region).flatMap((e) => e.hints) : REGIONS[region].hints[kind];
+}
 
 /** 지금 화면의 종류별 가중치 */
 export function currentWeights(ctx: ChoiceContext): Record<SceneKind, number> {
@@ -63,25 +65,20 @@ export function rollChoices(rng: Rng, ctx: ChoiceContext = EMPTY_CONTEXT): Choic
   while (out.length < count) {
     const hintKind = weightedPick(pool, weights, rng);
     pool.splice(pool.indexOf(hintKind), 1);
-    const hint = pickHint(hintKind, ctx.lastHints, rng);
+    const hint = pickHint(hintsFor(ctx.region, hintKind), ctx.lastHints, rng);
     const kind = rng.next() < DECEIVE_CHANCE ? otherKind(hintKind, weights, rng) : hintKind;
     const choice: Choice = { hintKind, hint, kind };
     // 이벤트 단서면 그 이벤트가, 다른 단서에 속아 이벤트가 벌어지면 아무 이벤트나 벌어진다
-    if (kind === "event") choice.eventId = hintKind === "event" ? eventByHint(hint)!.id : rng.pick(FIELD_EVENTS).id;
+    if (kind === "event") choice.eventId = hintKind === "event" ? eventByHint(hint)!.id : rng.pick(fieldEvents(ctx.region)).id;
     out.push(choice);
-  }
-  if (ctx.omen) for (const c of out) if (rng.next() < OMEN_CHANCE) c.omen = rollOmen(rng);
-  // 보스도 전투라서, 전투가 막힌 화면(방금 싸움)에는 섞지 않는다
-  if (ctx.chance && weights.battle > 0 && rng.next() < BOSS_CHANCE) {
-    out[out.length - 1] = { hintKind: "battle", kind: "battle", hint: rng.pick(BOSS_TEXT.chanceHints), boss: true };
   }
   return out;
 }
 
 /** 전 화면 단서를 뺀 나머지에서 고른다. 다 빠지면(단서가 너무 적으면) 전체에서 고른다. */
-function pickHint(kind: SceneKind, lastHints: readonly string[], rng: Rng): string {
-  const fresh = HINTS[kind].filter((h) => !lastHints.includes(h));
-  return rng.pick(fresh.length > 0 ? fresh : HINTS[kind]);
+function pickHint(hints: readonly string[], lastHints: readonly string[], rng: Rng): string {
+  const fresh = hints.filter((h) => !lastHints.includes(h));
+  return rng.pick(fresh.length > 0 ? fresh : hints);
 }
 
 /** 속일 때 실제로 벌어질 종류: 단서 종류와 막힌 종류를 뺀 나머지에서, 지금 가중치로 */

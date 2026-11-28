@@ -1,15 +1,16 @@
 // 던전 (6단계). 필드에서 던전 단서를 고르면 들어온다.
 // 방 3~5개(숨김)를 지난다. 방마다 갈림길 2개를 단서로 보고 고르면 전투 / 이벤트 / 빈 방 중 하나가 벌어진다.
-// 갈림길 화면에서는 언제든 나갈 수 있지만, 나가면 끝 보상은 없다. 마지막 방을 지나면 골드 + 아이템 1개.
-// 전투는 필드 것을 그대로 쓰고, 이벤트는 던전 전용(data/events.ts 의 place: "dungeon")만 나온다.
-// 7단계의 "더 깊이 들어간다"(보스)는 여기에 얹는다.
+// 갈림길 화면에서는 언제든 나갈 수 있지만, 나가면 끝 보상은 없다.
+// 방을 다 지나면 그 지역 던전의 우두머리가 나오고, 쓰러뜨리면 골드 + 아이템 1개 (F1, data/regions.ts).
+// 전투는 그 지역 적을 쓰고, 이벤트는 던전 전용(data/events.ts 의 place: "dungeon")만 나온다.
 
-import { ROOM_HINTS } from "../content/placeholder";
+import { ROOM_HINTS } from "../content/text";
 import { DUNGEON_EVENTS, eventByHint } from "../data/events";
 import { DECEIVE_CHANCE } from "./choices";
-import { SHOP_ITEM_IDS } from "./items";
+import { itemDef } from "../data/items";
+import { GEAR_IDS, SHOP_ITEM_IDS } from "./items";
 import type { Rng } from "./rng";
-import type { Dungeon, ItemId, RoomChoice, RoomKind } from "./types";
+import type { Dungeon, ItemId, RegionId, RoomChoice, RoomKind } from "./types";
 
 /** [임시값] 던전의 방 수 [최소, 최대] */
 export const DUNGEON_ROOMS: [number, number] = [3, 5];
@@ -24,13 +25,14 @@ export const ROOM_WEIGHTS: Record<RoomKind, number> = { battle: 50, event: 30, e
 export const EMPTY_ROOM_GOLD: [number, number] = [2, 5];
 
 /** [임시값] 끝 보상 골드 */
-export const REWARD_GOLD: [number, number] = [20, 35];
+export const REWARD_GOLD: [number, number] = [6, 14];
 
-/** [임시값] 끝 보상 아이템이 단단한 심장일 확률. 아니면 상점 아이템 5종 중 하나 */
+/** [임시값] 끝 보상 아이템이 고분 심장석일 확률, 장비일 확률. 나머지는 상점의 쓰는 물건 중 하나 */
 export const HEART_CHANCE = 0.3;
+export const GEAR_CHANCE = 0.3;
 
-export function newDungeon(rng: Rng): Dungeon {
-  return { rooms: rng.int(DUNGEON_ROOMS[0], DUNGEON_ROOMS[1]), cleared: 0, choices: rollRoomChoices(rng) };
+export function newDungeon(rng: Rng, region: RegionId): Dungeon {
+  return { region, rooms: rng.int(DUNGEON_ROOMS[0], DUNGEON_ROOMS[1]), cleared: 0, choices: rollRoomChoices(rng) };
 }
 
 /** 갈림길 2개. 한 화면 안에서 종류는 겹치지 않고, 필드와 같은 확률로 단서가 속인다 */
@@ -51,10 +53,16 @@ export function rollRoomChoices(rng: Rng): RoomChoice[] {
   return out;
 }
 
-/** 끝 보상: 골드와 아이템 하나 */
-export function rollReward(rng: Rng): { gold: number; item: ItemId } {
+/** 끝 보상 (우두머리 뒤 궤짝): 골드와 물건 하나. 장비는 지금 등급보다 한 등급 위까지 나온다 */
+export function rollReward(rng: Rng, tier = 0): { gold: number; item: ItemId } {
   const gold = rng.int(REWARD_GOLD[0], REWARD_GOLD[1]);
-  const item = rng.next() < HEART_CHANCE ? "heart" : rng.pick(SHOP_ITEM_IDS);
+  const r = rng.next();
+  const item =
+    r < HEART_CHANCE
+      ? "heart"
+      : r < HEART_CHANCE + GEAR_CHANCE
+        ? rng.pick(GEAR_IDS.filter((id) => itemDef(id).tier! <= tier + 1))
+        : rng.pick(SHOP_ITEM_IDS);
   return { gold, item };
 }
 
