@@ -1,7 +1,8 @@
-주제: $ARGUMENTS
+Topic: $ARGUMENTS
 
-1. docs/00-pitch.md 와 이 주제에 관련된 docs 문서를 먼저 읽어라.
-2. 기존 설정과 충돌하지 않고, docs/02-foundation.md 의 '나중에'로 미룬 범위를 끌어오지 않는 후보를 8개 제시하라. 미룬 범위를 건드리는 후보는 그렇다고 표시한다.
-3. 각 후보는 두 줄 이내로 쓰고, 서로 확실히 다른 방향이어야 한다.
-4. 마지막에 혼자 만들기에 범위가 가장 적당한 후보 2개를 골라 이유를 한 줄씩 말하라.
-5. 내가 고르기 전에는 어떤 문서도 수정하지 마라.
+1. Read docs/pitch.md, the relevant sections of docs/game.md, and any docs tied to this topic.
+2. Propose 8 candidates that don't conflict with existing settings and stay inside the current goal (the active file in docs/goals/, or if none, "다음 목표" in docs/open-questions.md). Mark any candidate that widens scope.
+3. Each candidate: max 2 lines, clearly different directions.
+4. Finally, pick the 2 candidates best sized for a solo dev, one-line reason each.
+5. Do not edit any doc until I choose.
+Answer in Korean.

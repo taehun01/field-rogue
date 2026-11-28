@@ -3,7 +3,7 @@
 /** 길 위에서 선택지를 고르면 벌어지는 일의 종류 */
 export type SceneKind = "battle" | "event" | "rest" | "shop" | "dungeon";
 
-/** 지역 4곳 (docs/world.md, data/regions.ts) */
+/** 지역 4곳 (docs/world/regions.md, data/regions.ts) */
 export type RegionId = "harbor" | "pines" | "bones" | "plateau";
 
 /** 물건 id (data/items.ts) */
@@ -56,7 +56,7 @@ export interface Choice {
   hint: string;
   /** 실제로 벌어질 종류. 대개 hintKind 와 같고, 가끔 속임이면 다르다 */
   kind: SceneKind;
-  /** kind 가 "event" 면 벌어질 이벤트 id (data/events.ts) */
+  /** kind 가 "event" 면 벌어질 이벤트 id (data/events/) */
   eventId?: string;
 }
 

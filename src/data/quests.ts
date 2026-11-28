@@ -1,5 +1,5 @@
 // 의뢰 데이터 (F5). 반복 의뢰의 배달 물건과, 마을마다 하나씩 있는 고유 인물의 한 번짜리 의뢰.
-// 고유 의뢰는 이야기로 이어지지 않는다 (docs/decisions.md). 인물은 docs/world.md 마을 사람들.
+// 고유 의뢰는 이야기로 이어지지 않는다 (docs/game.md 마을과 의뢰). 인물은 docs/world/people.md.
 // 숫자는 모두 [임시값]. 처리하는 쪽은 core/quests.ts.
 
 import type { RegionId } from "../core/types";

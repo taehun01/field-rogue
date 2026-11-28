@@ -2,7 +2,7 @@
 // 방 3~5개(숨김)를 지난다. 방마다 갈림길 2개를 단서로 보고 고르면 전투 / 이벤트 / 빈 방 중 하나가 벌어진다.
 // 갈림길 화면에서는 언제든 나갈 수 있지만, 나가면 끝 보상은 없다.
 // 방을 다 지나면 그 지역 던전의 우두머리가 나오고, 쓰러뜨리면 골드 + 아이템 1개 (F1, data/regions.ts).
-// 전투는 그 지역 적을 쓰고, 이벤트는 던전 전용(data/events.ts 의 place: "dungeon")만 나온다.
+// 전투는 그 지역 적을 쓰고, 이벤트는 던전 전용(data/events/ 의 place: "dungeon")만 나온다.
 
 import { ROOM_HINTS } from "../content/text";
 import { DUNGEON_EVENTS, eventByHint } from "../data/events";

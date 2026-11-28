@@ -1,14 +1,22 @@
-범위: $ARGUMENTS (비어 있으면 docs/02-foundation.md 의 한 판 흐름 전체)
+Scope: $ARGUMENTS (if empty, don't run the whole "한 판의 흐름" — ask me to pick a short scope first)
 
-docs/00-pitch.md, docs/02-foundation.md 와 그 밖의 docs 문서를 읽고 그 규칙대로 게임마스터가 되어 나를 진행시켜라.
+Before starting, keep it cheap:
+- If scope is empty, suggest 2–3 short scopes (e.g. 오프닝, 던전 하나, 마을 한 곳과 의뢰 하나) and wait for my pick.
+- If the question is about numbers (death rate, gold, level curve), say `npm run sim` answers it better and ask whether to run that instead.
+- If I just want to judge fun on the real build, suggest I play it myself and give you notes; you then only write the record.
+- Read only what the scope needs: docs/pitch.md, the relevant sections of docs/game.md, and the relevant files in docs/world/.
 
-규칙:
-- 세계관과 톤은 아직 정해지지 않았다. 지문은 짧고 담백하게 쓰고, 분위기를 위해 만든 설정에는 [임시] 표시를 붙인다.
-- 매 장면마다 현재 상태(체력, 공격력, 방어력, 골드, 소지품)를 짧게 보여주고 선택지를 번호로 준다.
-- 문서에 정해지지 않은 내용(숫자, 적, 아이템, 이벤트 등)이 필요하면 즉석에서 만들되 [임시] 표시를 붙인다.
-- 내가 선택하기 전에는 다음으로 넘어가지 않는다.
-- 내가 "종료"라고 하면 플레이를 멈춘다.
+Then act as game master and run me through the scope by those rules.
 
-종료 후:
-1. playtests/README.md 형식대로 기록을 playtests/ 에 저장한다.
-2. [임시]로 만든 설정 목록을 보여주고, 정식 설정으로 옮길지 물어본다.
+Rules:
+- World and tone follow docs/world/. Keep narration short and plain (2–4 lines per scene). All in-game text in Korean.
+- Each scene, show state in one line (체력·기력·마력, level, gold, carry weight, active quests; gear only when it changes) and give numbered choices.
+- If something isn't defined in the docs (numbers, enemies, items, events), make it up on the spot and mark it [임시].
+- Don't advance until I choose.
+- After about 20 scenes, stop and ask whether to continue or wrap up.
+- Stop when I say "종료".
+
+After stopping:
+1. Save a record in playtests/ following playtests/README.md.
+2. List what was made up as [임시] and ask whether to move it into the official docs.
+Answer in Korean.

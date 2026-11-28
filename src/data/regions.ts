@@ -1,5 +1,5 @@
-// 지역 데이터 (F1). 지역마다 길 위 단서, 적 3종, 던전과 우두머리, 마을이 있다. 세계관은 docs/world.md.
-// 지역 이벤트는 data/events.ts 에 region 으로 붙어 있다.
+// 지역 데이터 (F1). 지역마다 길 위 단서, 적 3종, 던전과 우두머리, 마을이 있다. 세계관은 docs/world/regions.md.
+// 지역 이벤트는 data/events/ 에 region 으로 붙어 있다.
 // 이 파일만 고치면 지역의 글과 적을 바꿀 수 있다. 숫자는 모두 [임시값].
 
 import type { RegionId } from "../core/types";
@@ -17,7 +17,7 @@ export interface EnemyDef {
   weight: number;
 }
 
-/** 길 위 단서 (이벤트 단서는 이벤트마다 data/events.ts 에 있다) */
+/** 길 위 단서 (이벤트 단서는 이벤트마다 data/events/ 에 있다) */
 export interface RoadHints {
   battle: readonly string[];
   rest: readonly string[];

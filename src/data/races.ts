@@ -1,5 +1,5 @@
 // 종족 4개 (F2). 시작 수치 보너스와 시작 기술 보너스만 다르다 (고유 능력은 docs/open-questions.md).
-// 세계관 설명은 docs/world.md. 숫자는 모두 [임시값].
+// 세계관 설명은 docs/world/races.md. 숫자는 모두 [임시값].
 
 import type { RaceId, RuneId, SkillId } from "../core/types";
 

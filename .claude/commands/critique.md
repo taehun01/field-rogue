@@ -1,12 +1,13 @@
-대상: $ARGUMENTS
+Target: $ARGUMENTS
 
-냉정한 게임 기획 비평가 입장에서 대상 문서를 검토하라. 칭찬은 생략한다.
+Review the target as a harsh game-design critic. Skip praise.
 
-다음을 찾아 각각 구체적인 위치와 함께 보고하라.
-1. 플레이어가 지루해질 지점
-2. 의미 없는 선택 (어떤 걸 골라도 결과가 같거나 정답이 뻔한 것)
-3. 플레이어가 꼼수를 쓸 수 있는 지점
-4. 다른 docs 문서와 모순되는 부분
-5. 혼자 만들기에 범위가 너무 큰 부분
+Find each of the following, with exact locations:
+1. Points where the player gets bored
+2. Meaningless choices (same result whatever you pick, or an obvious right answer)
+3. Exploits the player can use
+4. Contradictions with other docs
+5. Scope too big for a solo dev
 
-마지막에 가장 먼저 고칠 것 3개를 우선순위로 정리하라. 문서는 수정하지 마라.
+End with the top 3 fixes in priority order. Do not edit docs.
+Answer in Korean.

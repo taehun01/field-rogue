@@ -1,4 +1,4 @@
-// 룬 3개 (F3). 몸에 새겨 두면 마력을 써서 계속 쓸 수 있다 (docs/world.md 마법).
+// 룬 3개 (F3). 몸에 새겨 두면 마력을 써서 계속 쓸 수 있다 (docs/world/README.md 마법).
 // 누구나 치유 룬을 지니고 시작하고, 다른 룬은 마을의 룬새김이에게 돈을 내고 새긴다. 숫자는 모두 [임시값].
 
 import type { RuneId, SkillId } from "../core/types";

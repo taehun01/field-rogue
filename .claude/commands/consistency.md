@@ -1,8 +1,10 @@
-docs/ 아래 모든 문서를 읽고 서로 모순되거나 애매한 설정을 찾아라.
+Read every doc under docs/ and find contradictions or ambiguous settings.
 
-보고 형식:
-- 모순: 문서A의 내용 vs 문서B의 내용, 어느 쪽으로 맞출지 후보
-- 애매함: 어떤 설정이 해석에 따라 달라지는지
-- decisions.md 에 기록됐지만 다른 문서에 반영되지 않은 결정
+Report:
+- Contradiction: doc A says X vs doc B says Y, with candidates for which side to align to
+- Ambiguity: a setting that reads differently depending on interpretation
+- The same fact written in 2+ docs (candidates for keeping it in one place)
+- Places where docs/game.md rules differ from the code
 
-문서는 수정하지 말고, 해결이 필요한 항목은 open-questions.md 에 추가할지 나에게 물어라.
+Do not edit docs. Ask me whether to add items that need resolving to docs/open-questions.md.
+Answer in Korean.

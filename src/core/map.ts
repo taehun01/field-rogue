@@ -10,7 +10,7 @@ export interface Road {
   steps: number;
 }
 
-/** 서리항–솔그늘–뼈의 골짜기–하얀 고원, 그리고 서리항–뼈의 골짜기 해안 길 (docs/world.md) */
+/** 서리항–솔그늘–뼈의 골짜기–하얀 고원, 그리고 서리항–뼈의 골짜기 해안 길 (docs/world/regions.md) */
 export const ROADS: readonly Road[] = [
   { a: "harbor", b: "pines", steps: 6 },
   { a: "pines", b: "bones", steps: 7 },

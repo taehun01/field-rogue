@@ -1,5 +1,5 @@
-// 화면에 보이는 공통 글 (지역마다 다른 글은 data/regions.ts, 이벤트는 data/events.ts).
-// 세계관은 docs/world.md 를 따른다. 글은 Claude가 완성본으로 쓰고 Taehun이 플레이하며 판단한다 (CLAUDE.md).
+// 화면에 보이는 공통 글 (지역마다 다른 글은 data/regions.ts, 이벤트는 data/events/).
+// 세계관은 docs/world/ 를 따른다. 글은 Claude가 완성본으로 쓰고 Taehun이 플레이하며 판단한다 (CLAUDE.md).
 // 아직 다듬지 않은 글이 있어도 화면에 [임시]를 붙이지 않는다.
 
 import type { RoomKind, SkillId } from "../core/types";
@@ -15,7 +15,7 @@ export function josa(word: string, pair: "이/가" | "을/를" | "은/는" | "�
   return word + (final === 0 ? without : withFinal);
 }
 
-/** 던전 갈림길 단서. 이벤트 단서는 이벤트마다 data/events.ts 에 있다 */
+/** 던전 갈림길 단서. 이벤트 단서는 이벤트마다 data/events/ 에 있다 */
 export const ROOM_HINTS: Record<Exclude<RoomKind, "event">, readonly string[]> = {
   battle: ["뼈 부스러기가 흩어진 통로", "어둠 속에서 숨소리가 난다", "벽에 긁힌 자국이 길다"],
   empty: ["먼지만 쌓인 좁은 방", "물방울 떨어지는 소리뿐", "무너진 선반이 보인다"],

@@ -136,7 +136,7 @@ export function newGame(seed: number, race: RaceId | null = "northman", hooks: G
 }
 
 /**
- * 저장된 상태에서 이어 한다. 상태는 그대로 되살리고, 무작위는 새 seed 로 굴린다 (decisions.md).
+ * 저장된 상태에서 이어 한다. 상태는 그대로 되살리고, 무작위는 새 seed 로 굴린다 (docs/game.md 저장).
  * 저장은 마을에서만 하므로 마을 화면에서 다시 시작한다.
  */
 export function resumeGame(saved: GameState, seed: number, hooks: GameHooks = {}, afterDeath = false): Game {

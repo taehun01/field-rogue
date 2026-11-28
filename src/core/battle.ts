@@ -26,7 +26,7 @@ export const FLEE_COST = 3;
 export const AMBUSH_MULT = 2;
 
 /**
- * [임시값] 적은 플레이어 레벨에 맞춰 강해진다 (지역과는 상관없다, docs/decisions.md).
+ * [임시값] 적은 플레이어 레벨에 맞춰 강해진다 (지역과는 상관없다, docs/game.md 전투).
  * 레벨 knee 까지는 한 레벨마다 체력·공격·골드가 early 씩, 그 뒤로는 late 씩 오른다.
  * 초반에는 적이 빨리 따라와 긴장이 남고, 후반에는 천천히 따라와 레벨이 오를수록 조금씩 쉬워진다 (F8 시뮬레이션).
  * defEvery 레벨마다 방어가 1 오른다.

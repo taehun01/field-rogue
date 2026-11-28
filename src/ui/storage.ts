@@ -3,7 +3,7 @@
 import { deserialize, serialize, type SaveFile } from "../core/save";
 import type { GameState } from "../core/types";
 
-const KEY = "field-rogue.save";
+const KEY = "text-skyrim.save";
 
 export function readSave(): SaveFile | null {
   try {
