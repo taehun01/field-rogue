@@ -22,4 +22,4 @@
 
 ## 아직 안 정한 것
 
-가제, 메인·서브 스토리의 내용, 엔딩을 둘지 (docs/open-questions.md).
+가제 (docs/open-questions.md). 이야기 줄기는 docs/world/story.md.
