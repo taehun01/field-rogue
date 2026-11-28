@@ -1,6 +1,6 @@
-범위: $ARGUMENTS (비어 있으면 docs/01-mvp.md 의 한 판 흐름 전체)
+범위: $ARGUMENTS (비어 있으면 docs/02-foundation.md 의 한 판 흐름 전체)
 
-docs/00-pitch.md, docs/01-mvp.md 와 그 밖의 docs 문서를 읽고 그 규칙대로 게임마스터가 되어 나를 진행시켜라.
+docs/00-pitch.md, docs/02-foundation.md 와 그 밖의 docs 문서를 읽고 그 규칙대로 게임마스터가 되어 나를 진행시켜라.
 
 규칙:
 - 세계관과 톤은 아직 정해지지 않았다. 지문은 짧고 담백하게 쓰고, 분위기를 위해 만든 설정에는 [임시] 표시를 붙인다.

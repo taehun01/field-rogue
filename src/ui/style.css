@@ -7,6 +7,8 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* hidden 속성은 display 를 준 규칙보다 앞선다 */
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
 body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-size: 18px; line-height: 1.6; }
 #app { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
@@ -15,8 +17,18 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .stats { display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 12px; background: var(--panel); border: 2px solid #2e2a38; }
 .stats .hp { color: #e06c6c; }
 .stats .gold { color: var(--accent); }
-/* 도트 그래픽 자리 (1단계는 빈 칸) */
+/* 도트 그래픽 자리. 지금은 지도를 그린다 (F1) */
 .art { height: 160px; margin: 16px 0; background: var(--panel); border: 2px solid #2e2a38; image-rendering: pixelated; }
+.map { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
+.map .road { fill: none; stroke: #4a4458; stroke-width: 3; stroke-dasharray: 6 4; }
+.map .road.active { stroke: var(--accent); }
+.map .dist { fill: var(--dim); font: 13px inherit; text-anchor: middle; }
+.map .node { fill: #8fb3d9; }
+.map .node.here { fill: var(--accent); }
+.map .label { fill: var(--text); font-size: 14px; text-anchor: middle; }
+.map .label.here { fill: var(--accent); }
+.map .me { fill: var(--accent); }
+.stats .where { margin-left: auto; color: var(--dim); }
 .story { min-height: 96px; }
 .story p { margin: 0 0 6px; }
 .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
@@ -25,13 +37,29 @@ body { font-family: "Galmuri11", "DungGeunMo", ui-monospace, monospace; font-siz
 .enemy { color: #e06c6c; margin: 0 0 8px; }
 .choice:disabled { opacity: 0.4; cursor: default; }
 .seed { margin-top: 24px; font-size: 14px; }
-/* 소지품 칸 (4단계) */
-.inventory { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 15px; }
-.item { font: inherit; color: var(--text); background: transparent; border: 2px dashed #2e2a38; padding: 4px 10px; cursor: pointer; }
-.item:hover:not(:disabled) { border-color: var(--accent); }
-.item:disabled { color: var(--dim); cursor: default; }
+/* 짐 칸 (F2): 장착한 장비 두 줄 + 짐 목록 */
+.bag { margin-top: 16px; font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
+.bag .slot { display: flex; gap: 8px; align-items: center; }
+.bag .items { display: flex; gap: 8px; flex-wrap: wrap; }
+.item { display: inline-flex; gap: 6px; align-items: center; border: 2px dashed #2e2a38; padding: 3px 8px; }
+.mini { font: inherit; font-size: 13px; color: var(--accent); background: transparent; border: 1px solid #2e2a38; padding: 0 6px; cursor: pointer; }
+.mini:hover { border-color: var(--accent); }
+.stats .heavy { color: #e06c6c; }
+/* 기력·마력 (F3) */
+.st { color: #8fd98f; }
+.mp { color: #8fb3d9; }
+/* 기술·레벨 (F4) */
+.stats .level { color: var(--accent); }
+.skill { color: var(--accent); }
+.skill::before { content: "▲ "; }
+.bag .skills b { color: var(--text); font-weight: normal; }
+/* 의뢰·일지 (F5) */
+.quest { color: #d98fd0; }
+.quest-item { border-color: #6b4a66; }
+.journal p { margin: 2px 0; }
+.journal .past { color: var(--dim); font-size: 14px; }
+/* 처음 화면 (F6) */
+.title-screen { margin-top: 120px; font-size: 22px; }
+.title-screen p:first-child { color: var(--accent); font-size: 32px; }
 /* 던전 안 표시 (6단계) */
 .stats .dungeon { color: #8fb3d9; }
-/* 보스 (7단계) */
-.choice .omen { color: #b48ad9; }
-.enemy.boss { color: #ff4d4d; font-weight: bold; }

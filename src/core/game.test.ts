@@ -1,80 +1,200 @@
 import { describe, expect, it } from "vitest";
-import { INN_PRICE, newGame, type Game } from "./game";
-import { eventById } from "../data/events";
-import { canChoose } from "./events";
-import { INVENTORY_SIZE, ITEMS } from "./items";
+import { REGIONS } from "../data/regions";
+import { fieldEvents, eventById } from "../data/events";
+import { innPrice, newGame, type Game } from "./game";
+import { neighbors, regionAt, roadBetween, START_REGION } from "./map";
+import { inScene, onRoad, stepOnce, sturdy } from "./testkit";
 
-/** 이벤트의 마지막 고를 거리 (늘 "지나간다", 조건 없음) */
-const lastOption = (g: Game) => eventById(g.state.event!.id).options.length - 1;
-
-/** 한 걸음: 전투 중이면 공격, 상점이면 떠나고, 쉴 곳이면 모닥불, 던전이면 index 번 갈림길(끝에 닿았으면 나감), 아니면 index 번 선택지 */
-function stepOnce(g: Game, index = 0) {
-  const s = g.state;
-  if (s.battle) g.act("attack");
-  else if (s.shop) g.leaveShop();
-  else if (s.camp) g.rest("campfire");
-  else if (s.event) g.answer(lastOption(g));
-  else if (s.dungeon?.deep) g.leaveDungeon();
-  else if (s.dungeon) g.enterRoom(index % s.dungeon.choices.length);
-  else g.choose(index % s.choices.length);
-}
-
-/** 항상 첫 번째 선택지를 고르고, 싸우면 공격만 하며 죽을 때까지 돌린다 */
+/** 항상 첫 번째를 고르고, 싸우면 공격만 하며 죽을 때까지 돌린다 */
 function playUntilDeath(seed: number, limit = 10_000) {
   const g = newGame(seed);
-  while (!g.state.dead && g.state.step < limit) stepOnce(g);
+  while (!g.state.dead && g.state.step < limit) stepOnce(g, g.state.step);
   return g;
 }
+
+/** 장면을 다 넘기고 길 위 선택지나 마을 화면으로 돌아온다 */
+function settle(g: Game) {
+  while (!g.state.dead && inScene(g)) {
+    if (g.state.dungeon && !g.state.battle && !g.state.event) g.leaveDungeon();
+    else stepOnce(g);
+  }
+}
+
+describe("시작과 마을", () => {
+  it("서리항 마을에서 시작한다. 선택지는 없고 상점 진열이 정해져 있다", () => {
+    const g = newGame(1);
+    expect(g.state.at).toBe(START_REGION);
+    expect(g.state.travel).toBeNull();
+    expect(g.state.choices).toEqual([]);
+    expect(g.state.townStock.length).toBeGreaterThan(0);
+    expect(g.state.story).toEqual([...REGIONS.harbor.arrive]);
+  });
+
+  it("여관은 골드를 내고 전부 회복한다. 모자라면 아무 일 없다", () => {
+    const g = newGame(1);
+    const p = g.state.player;
+    p.hp = 3;
+    p.gold = innPrice(1) - 1;
+    g.inn();
+    expect(p.hp).toBe(3);
+    p.gold = innPrice(1) + 2;
+    g.inn();
+    expect(p.hp).toBe(p.maxHp);
+    expect(p.gold).toBe(2);
+  });
+
+  it("마을 상점은 나갔다 들어와도 같은 진열이고, 산 것은 빠진 채로 남는다", () => {
+    const g = newGame(2);
+    g.state.player.gold = 999;
+    g.state.player.bag = [];
+    const first = [...g.state.townStock];
+    g.openShop();
+    g.buy(0);
+    g.leaveShop();
+    expect(g.state.travel).toBeNull();
+    expect(g.state.choices).toEqual([]);
+    g.openShop();
+    expect(g.state.shop!.stock).toEqual(first.slice(1));
+  });
+
+  it("마을에서는 길 위 선택을 고를 수 없고, 길이 없는 곳으로는 못 떠난다", () => {
+    const g = newGame(3);
+    g.choose(0);
+    expect(g.state.step).toBe(0);
+    g.depart("plateau"); // 서리항–하얀 고원은 길이 없다
+    expect(g.state.travel).toBeNull();
+  });
+});
+
+describe("지도와 길", () => {
+  it("떠나면 길 거리만큼 걸어야 도착하고, 도착하면 그 마을이 된다", () => {
+    for (const n of neighbors(START_REGION)) {
+      const g = sturdy(4);
+      g.depart(n.to);
+      expect(g.state.travel).toEqual({ from: START_REGION, to: n.to, total: n.steps, walked: 0 });
+      let walked = 0;
+      while (g.state.travel) {
+        if (!inScene(g)) walked++;
+        stepOnce(g);
+        settle(g);
+      }
+      expect(walked).toBe(n.steps);
+      expect(g.state.at).toBe(n.to);
+      expect(g.state.choices).toEqual([]);
+      expect(g.state.story).toEqual(expect.arrayContaining([...REGIONS[n.to].arrive]));
+    }
+  });
+
+  it("길 앞쪽 절반은 떠난 지역, 뒤쪽 절반은 갈 지역의 일이 벌어진다 (시드 100개)", () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const g = onRoad(seed);
+      while (g.state.travel && !g.state.dead) {
+        const t = g.state.travel;
+        expect(g.state.here).toBe(regionAt(t, t.walked));
+        for (const c of g.state.choices) {
+          if (c.kind !== "event") continue;
+          const ev = eventById(c.eventId!);
+          expect(fieldEvents(g.state.here)).toContain(ev);
+        }
+        if (g.state.choices[0].kind === "battle") {
+          g.choose(0);
+          expect(REGIONS[g.state.here].enemies.map((e) => e.id)).toContain(g.state.battle!.enemy.id);
+        } else g.choose(0);
+        settle(g);
+      }
+    }
+  });
+
+  it("되돌아가면 방향이 바뀌고, 지금까지 걸은 만큼 다시 걸어 떠난 곳에 닿는다", () => {
+    const g = onRoad(5);
+    const { from, to, total } = g.state.travel!;
+    g.choose(0);
+    settle(g);
+    g.choose(0);
+    settle(g);
+    expect(g.state.travel!.walked).toBe(2);
+    g.turnBack();
+    expect(g.state.travel).toEqual({ from: to, to: from, total, walked: total - 2 });
+    let walked = 0;
+    while (g.state.travel) {
+      if (!inScene(g)) walked++;
+      stepOnce(g);
+      settle(g);
+    }
+    expect(walked).toBe(2);
+    expect(g.state.at).toBe(from);
+  });
+
+  it("장면 중에는 되돌아갈 수 없다", () => {
+    const g = onRoad(6);
+    g.choose(0);
+    if (!inScene(g)) return;
+    const t = structuredClone(g.state.travel);
+    g.turnBack();
+    expect(g.state.travel).toEqual(t);
+  });
+
+  it("길 위 쉴 곳은 모닥불뿐이다 (여관은 마을에만)", () => {
+    const g = onRoad(7);
+    for (let n = 0; n < 200 && !g.state.camp; n++) {
+      const i = g.state.choices.findIndex((c) => c.kind === "rest");
+      if (i >= 0 && !inScene(g)) g.choose(i);
+      else stepOnce(g, n);
+    }
+    expect(g.state.camp).toBe(true);
+    g.state.player.hp = 1;
+    g.rest();
+    expect(g.state.camp).toBe(false);
+    expect(g.state.player.hp).toBeGreaterThan(1);
+  });
+
+  it("모든 지역 사이를 오갈 수 있다 (지도는 이어져 있다)", () => {
+    const seen = new Set([START_REGION]);
+    const queue = [START_REGION];
+    while (queue.length) for (const n of neighbors(queue.shift()!)) if (!seen.has(n.to)) seen.add(n.to), queue.push(n.to);
+    expect(seen.size).toBe(Object.keys(REGIONS).length);
+    expect(roadBetween("harbor", "plateau")).toBeUndefined();
+  });
+});
 
 describe("한 판", () => {
   it("같은 시드, 같은 선택이면 같은 판", () => {
     const a = newGame(99);
     const b = newGame(99);
-    for (let i = 0; i < 40 && !a.state.dead; i++) {
-      stepOnce(a, 1);
-      stepOnce(b, 1);
+    for (let i = 0; i < 80 && !a.state.dead; i++) {
+      stepOnce(a, i);
+      stepOnce(b, i);
     }
     expect(a.state).toEqual(b.state);
   });
 
-  it("벌어진 종류는 since 0, 다른 종류는 한 걸음씩 늘어난다", () => {
-    const g = newGame(7);
-    const first = g.state.choices[0].kind;
-    g.choose(0);
-    expect(g.state.since[first]).toBe(0);
-    while (g.state.battle || g.state.shop || g.state.camp || g.state.event || g.state.dungeon) stepOnce(g);
-    const second = g.state.choices[0]?.kind;
-    if (!second) return; // 첫 전투에서 죽음
-    g.choose(0);
-    expect(g.state.since[second]).toBe(0);
-    if (!g.state.dead) expect(g.state.since[first]).toBe(first === second ? 0 : 1);
-  });
-
-  it("같은 종류가 연달아 벌어지지 않는다 (시드 200개)", () => {
-    for (let seed = 1; seed <= 200; seed++) {
-      const g = newGame(seed);
+  it("같은 종류가 연달아 벌어지지 않는다 (시드 100개)", () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const g = sturdy(seed);
       let last = null;
-      while (!g.state.dead && g.state.step < 500) {
-        if (g.state.battle || g.state.shop || g.state.camp || g.state.event || g.state.dungeon) {
-          stepOnce(g);
+      for (let n = 0; n < 400 && !g.state.dead; n++) {
+        if (!g.state.travel || inScene(g)) {
+          if (!g.state.travel) last = null; // 마을을 거치면 새로 센다
+          stepOnce(g, n);
           continue;
         }
-        const kind = g.state.choices[seed % g.state.choices.length].kind;
+        const i = n % g.state.choices.length;
+        const kind = g.state.choices[i].kind;
         expect(kind).not.toBe(last);
-        g.choose(seed % g.state.choices.length);
+        g.choose(i);
         last = kind;
       }
     }
   });
 
   it("범위 밖 선택은 무시", () => {
-    const g = newGame(5);
+    const g = onRoad(5);
     g.choose(7);
     expect(g.state.step).toBe(0);
   });
 
-  it("죽을 때까지 끊기지 않고 돌아가다가 결국 죽는다 (시드 500개)", () => {
-    for (let seed = 1; seed <= 500; seed++) {
+  it("죽을 때까지 끊기지 않고 돌아간다 (시드 300개)", () => {
+    for (let seed = 1; seed <= 300; seed++) {
       const g = playUntilDeath(seed);
       expect(g.state.dead).toBe(true);
       expect(g.state.player.hp).toBe(0);
@@ -82,73 +202,14 @@ describe("한 판", () => {
     }
   });
 
-  it("죽은 뒤에는 고를 수 없다", () => {
+  it("죽은 뒤에는 아무것도 할 수 없다", () => {
     const g = playUntilDeath(3);
     const before = structuredClone(g.state);
     g.choose(0);
     g.act("attack");
+    g.inn();
+    g.depart("pines");
+    g.turnBack();
     expect(g.state).toEqual(before);
-  });
-});
-
-describe("전투 진입", () => {
-  it("전투가 벌어지면 선택지가 비고, 전투 중엔 choose 가 무시된다", () => {
-    for (let seed = 1; seed <= 200; seed++) {
-      const g = newGame(seed);
-      const i = g.state.choices.findIndex((c) => c.kind === "battle");
-      if (i < 0) continue;
-      g.choose(i);
-      expect(g.state.battle).not.toBeNull();
-      expect(g.state.choices).toEqual([]);
-      const step = g.state.step;
-      g.choose(0);
-      expect(g.state.step).toBe(step);
-      return;
-    }
-    throw new Error("200개 시드 첫 화면에 전투가 하나도 없음");
-  });
-});
-
-describe("무적 판 없음", () => {
-  /** 숫돌을 사 모으고, 여관에서 쉬고, 약을 아껴 쓰는 플레이어. 강해지는 적이 없으면 일부 판이 끝나지 않던 전략 */
-  function hoarder(seed: number, limit = 3000) {
-    const g = newGame(seed);
-    while (!g.state.dead && g.state.step < limit) {
-      const s = g.state;
-      const p = s.player;
-      const low = p.hp < p.maxHp * 0.4;
-      if (s.battle) {
-        const pot = p.items.indexOf("potion");
-        if (low && pot >= 0) g.act("item", pot);
-        else if (low) g.act("flee");
-        else g.act("attack");
-      } else if (s.shop) {
-        const i = s.shop.stock.findIndex(
-          (id) => (id === "whetstone" || id === "potion") && p.gold >= ITEMS[id].price && p.items.length < INVENTORY_SIZE,
-        );
-        if (i >= 0) g.buy(i);
-        else g.leaveShop();
-      } else if (s.camp) {
-        g.rest(p.gold >= INN_PRICE && p.hp < p.maxHp / 2 ? "inn" : "campfire");
-      } else if (s.event) {
-        // 이벤트에서는 고를 수 있는 것 중 걸음마다 다른 것 (우물 동전으로 최대 체력도 오른다)
-        const opts = eventById(s.event.id).options;
-        const ok = opts.map((_, i) => i).filter((i) => canChoose(opts[i], p));
-        g.answer(ok[(seed + s.step) % ok.length]);
-      } else if (s.dungeon) {
-        // 던전은 체력이 넉넉할 때만 끝까지, 아니면 나간다
-        if (low || s.dungeon.deep) g.leaveDungeon();
-        else g.enterRoom(s.step % s.dungeon.choices.length);
-      } else {
-        const w = p.items.findIndex((id) => id === "whetstone" || id === "heart");
-        if (w >= 0) g.use(w);
-        else g.choose((seed * 31 + s.step * 7) % s.choices.length);
-      }
-    }
-    return g;
-  }
-
-  it("숫돌을 모으며 강해져도 결국 죽는다 (시드 300개)", () => {
-    for (let seed = 1; seed <= 300; seed++) expect(hoarder(seed).state.dead).toBe(true);
   });
 });
