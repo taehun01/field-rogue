@@ -8,7 +8,7 @@
 - docs/pitch.md : 무엇을 왜 (가장 먼저 읽을 것)
 - docs/game.md : 지금 게임 규칙 + 결정 이유
 - docs/world/ : 세계관 (README·races·regions·people). 게임 안의 모든 글은 이를 따른다
-- docs/goals/ : 목표별 계획과 체크리스트 (01·02 완료, 지금 목표는 open-questions 에서 정한다)
+- docs/goals/ : 목표별 계획과 체크리스트 (01·02 완료, 지금 목표는 03-living-world.md)
 - docs/open-questions.md : 아직 정하지 않은 것
 - playtests/ : 플레이 기록과 시뮬레이션 결과. 숫자는 이것과 코드의 `[임시값]` 에만
 
